@@ -12,6 +12,20 @@ const PRICES = {
 };
 
 
+// ── PANEL (slide-in form) ──
+function openPanel() {
+  document.getElementById('panel').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow = 'hidden'; // stop background scrolling
+}
+
+function closePanel() {
+  document.getElementById('panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+
 // ── TABS ──
 function switchTab(name, btn) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
@@ -51,7 +65,6 @@ function calcPrice() {
 
 
 // ── ADD TRANSACTION ──
-// Sends the form data to Flask via POST /api/add
 async function addTransaction() {
   const customer = document.getElementById('t-customer').value.trim();
   if (!customer) {
@@ -62,7 +75,6 @@ async function addTransaction() {
   const total = calcPrice();
   const paid  = parseInt(document.getElementById('t-paid').value);
 
-  // This object matches the columns in your SQLite database
   const data = {
     date:            document.getElementById('t-date').value,
     weekday:         document.getElementById('t-weekday').value,
@@ -91,8 +103,9 @@ async function addTransaction() {
     const result = await res.json();
 
     if (result.status === 'ok') {
+      closePanel();
       resetForm();
-      alert('Transaction saved!');
+      renderReceipts(); // refresh the table immediately
     } else {
       alert('Something went wrong. Check the terminal for errors.');
     }
@@ -131,7 +144,6 @@ function updateWeekday() {
 
 
 // ── RECEIPTS ──
-// Fetches all transactions from Flask GET /api/list
 async function renderReceipts() {
   const search     = (document.getElementById('search').value || '').toLowerCase();
   const filterPaid = document.getElementById('filter-paid').value;
@@ -140,8 +152,8 @@ async function renderReceipts() {
   tbody.innerHTML = '<tr><td colspan="10" class="empty">Loading...</td></tr>';
 
   try {
-    const res     = await fetch('/api/list');
-    const rows    = await res.json();
+    const res  = await fetch('/api/list');
+    const rows = await res.json();
 
     const filtered = rows.filter(t => {
       const text      = (t.customer_name + ' ' + t.in_charge + ' ' + t.other_notes).toLowerCase();
@@ -186,7 +198,6 @@ async function renderReceipts() {
   }
 }
 
-// Mark a transaction as paid
 async function markPaid(id) {
   try {
     await fetch('/api/mark_paid', {
@@ -200,7 +211,6 @@ async function markPaid(id) {
   }
 }
 
-// Delete a transaction
 async function deleteTransaction(id) {
   if (!confirm('Delete this transaction? This cannot be undone.')) return;
   try {
@@ -217,7 +227,7 @@ async function deleteTransaction(id) {
 
 
 // ── EXPENSES ──
-// Stored in browser for now — we'll move this to Flask in the next step
+// Stored in browser for now — we'll move to Flask in a later step
 let expenses = JSON.parse(localStorage.getItem('lm_ex') || '[]');
 
 function saveExpenses() {
@@ -332,4 +342,7 @@ async function renderSummary() {
   });
   updateWeekday();
   calcPrice();
+
+  // Load receipts immediately on page open
+  renderReceipts();
 })();
