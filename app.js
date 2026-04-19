@@ -1,47 +1,37 @@
 // ═══════════════════════════════════════════════════
-//  Laundry PMS — app.js
-//  localStorage version (no backend yet)
+//  LAUNDRY — app.js
+//  localStorage · no backend yet
 // ═══════════════════════════════════════════════════
 
-// ── PRICING ──
-const PRICES = { wash: 100, dry: 90, rush: 50, extraPerLoad: 20 };
-
-// ── MONTHS / DAYS ──
+const PRICES     = { wash: 100, dry: 90, rush: 50, extraPerLoad: 20 };
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAY_NAMES   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-// ── STATE ──
 let calYear  = new Date().getFullYear();
 let calMonth = new Date().getMonth();
-let currentPage = 'dashboard';
 
-// ── DATA ──
+// ── DATA ──────────────────────────────────────────
 function loadData() {
-  try {
-    const s = localStorage.getItem('Laundry_data');
-    if (s) return JSON.parse(s);
-  } catch(e) {}
+  try { const s = localStorage.getItem('laundry_data'); if (s) return JSON.parse(s); } catch(e) {}
   return { transactions: [], expenses: [] };
 }
 function saveData() {
-  try { localStorage.setItem('Laundry_data', JSON.stringify(DB)); } catch(e) {}
+  try { localStorage.setItem('laundry_data', JSON.stringify(DB)); } catch(e) {}
 }
 
 let DB = loadData();
 if (!DB.transactions) DB.transactions = [];
 if (!DB.expenses)     DB.expenses     = [];
 
-
-// ── TOAST ──
-function toast(msg, duration = 2800) {
+// ── TOAST ─────────────────────────────────────────
+function toast(msg, ms = 2800) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), duration);
+  setTimeout(() => el.classList.remove('show'), ms);
 }
 
-
-// ── INIT ──
+// ── INIT ──────────────────────────────────────────
 function initApp() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('tDate').value = today;
@@ -50,36 +40,27 @@ function initApp() {
     new Date().toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
   updateWeekday();
   calcPrice();
-  renderAll();
+  showPage('dashboard', document.getElementById('nav-dashboard'));
 }
 
-function renderAll() {
-  if (currentPage === 'dashboard') renderDashboard();
-  if (currentPage === 'calendar')  renderCalendar();
-  if (currentPage === 'receipts')  { populateMonthFilter(); renderReceipts(); }
-  if (currentPage === 'expenses')  renderExpenses();
-}
-
-
-// ── PAGE NAVIGATION ──
+// ── PAGES ─────────────────────────────────────────
 function showPage(page, el) {
-  currentPage = page;
-
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-
   document.getElementById('page-' + page).classList.add('active');
   if (el) el.classList.add('active');
 
-  const titles = { dashboard:'Dashboard', calendar:'Calendar', receipts:'Receipts', expenses:'Expenses' };
+  const titles = { dashboard:'Dashboard', receipts:'Receipts', expenses:'Expenses' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
 
   closeSidebar();
-  renderAll();
+
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'receipts')  { populateMonthFilter(); renderReceipts(); }
+  if (page === 'expenses')  renderExpenses();
 }
 
-
-// ── SIDEBAR (mobile) ──
+// ── SIDEBAR ───────────────────────────────────────
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sbOverlay').classList.toggle('open');
@@ -89,21 +70,34 @@ function closeSidebar() {
   document.getElementById('sbOverlay').classList.remove('open');
 }
 
-
-// ── MODAL ──
-function openModal() {
-  document.getElementById('overlay').classList.add('open');
-  document.getElementById('tCustomer').focus();
+// ── TRANSACTION MODAL ─────────────────────────────
+function openTxModal() {
+  document.getElementById('txOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('tCustomer').focus(), 100);
 }
-function closeModal() {
-  document.getElementById('overlay').classList.remove('open');
+function closeTxModal() {
+  document.getElementById('txOverlay').classList.remove('open');
 }
-function handleOverlayClick(e) {
-  if (e.target === document.getElementById('overlay')) closeModal();
+function handleTxOverlayClick(e) {
+  if (e.target === document.getElementById('txOverlay')) closeTxModal();
 }
 
+// ── CALENDAR MODAL ────────────────────────────────
+function openCalModal() {
+  calYear  = new Date().getFullYear();
+  calMonth = new Date().getMonth();
+  renderCalendar();
+  document.getElementById('calOverlay').classList.add('open');
+}
+function closeCalModal() {
+  document.getElementById('calOverlay').classList.remove('open');
+  closeDayPanel();
+}
+function handleCalOverlayClick(e) {
+  if (e.target === document.getElementById('calOverlay')) closeCalModal();
+}
 
-// ── PRICE CALCULATOR ──
+// ── PRICE CALC ────────────────────────────────────
 function calcPrice() {
   const loads = parseInt(document.getElementById('tLoads').value) || 1;
   const rush  = parseInt(document.getElementById('tRush').value);
@@ -116,13 +110,11 @@ function calcPrice() {
   if (half)  total = total / 2;
 
   document.getElementById('priceDisplay').textContent = '₱' + total.toLocaleString();
-
   let parts = [`${loads} load${loads > 1 ? 's' : ''} × ₱${PRICES.wash + PRICES.dry}`];
   if (rush)  parts.push('rush +₱50');
   if (pload) parts.push(`extra +₱${loads * PRICES.extraPerLoad}`);
   if (half)  parts.push('half price');
   document.getElementById('priceBreakdown').textContent = parts.join('  ·  ');
-
   return total;
 }
 
@@ -133,8 +125,7 @@ function updateWeekday() {
     ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date(d + 'T00:00:00').getDay()];
 }
 
-
-// ── ADD TRANSACTION ──
+// ── ADD TRANSACTION ───────────────────────────────
 function addTransaction() {
   const customer = document.getElementById('tCustomer').value.trim();
   if (!customer) { toast('⚠️ Please enter a customer name.'); return; }
@@ -155,20 +146,21 @@ function addTransaction() {
     pload:    parseInt(document.getElementById('tPload').value),
     half:     parseInt(document.getElementById('tHalf').value),
     notes:    document.getElementById('tNotes').value,
-    total,
-    pay:      parseFloat(document.getElementById('tPay').value) || 0,
-    paid,
-    datePaid: paid ? document.getElementById('tDate').value : ''
+    total, pay: parseFloat(document.getElementById('tPay').value) || 0,
+    paid, datePaid: paid ? document.getElementById('tDate').value : ''
   });
 
   saveData();
-  closeModal();
-  resetForm();
+  closeTxModal();
+  resetTxForm();
   toast('✅ Transaction saved.');
-  renderAll();
+
+  const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
+  if (activePage === 'dashboard') renderDashboard();
+  if (activePage === 'receipts')  renderReceipts();
 }
 
-function resetForm() {
+function resetTxForm() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('tDate').value     = today;
   document.getElementById('tIncharge').value = '';
@@ -182,40 +174,35 @@ function resetForm() {
   document.getElementById('tNotes').value    = '';
   document.getElementById('tPay').value      = '';
   document.getElementById('tPaid').value     = 0;
-  updateWeekday();
-  calcPrice();
+  updateWeekday(); calcPrice();
 }
 
 function markPaid(id) {
   const tx = DB.transactions.find(t => t.id === id);
-  if (tx) {
-    tx.paid = 1;
-    tx.datePaid = new Date().toISOString().split('T')[0];
-    saveData();
-    toast('✅ Marked as paid.');
-    renderAll();
-  }
+  if (!tx) return;
+  tx.paid = 1; tx.datePaid = new Date().toISOString().split('T')[0];
+  saveData(); toast('✅ Marked as paid.');
+  const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
+  if (activePage === 'dashboard') renderDashboard();
+  if (activePage === 'receipts')  renderReceipts();
 }
 
 function deleteTx(id) {
   if (!confirm('Delete this transaction? This cannot be undone.')) return;
   DB.transactions = DB.transactions.filter(t => t.id !== id);
-  saveData();
-  toast('🗑 Transaction deleted.');
-  renderAll();
+  saveData(); toast('🗑 Deleted.');
+  const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
+  if (activePage === 'dashboard') renderDashboard();
+  if (activePage === 'receipts')  renderReceipts();
 }
 
-
-// ══════════════════════════════
+// ══════════════════════════════════════════════════
 //  DASHBOARD
-// ══════════════════════════════
-
+// ══════════════════════════════════════════════════
 function renderDashboard() {
   const now   = new Date();
   const month = now.getMonth();
   const year  = now.getFullYear();
-
-  document.getElementById('dashMonthLabel').textContent = MONTH_NAMES[month] + ' ' + year;
 
   const monthTx = DB.transactions.filter(t => {
     if (!t.date) return false;
@@ -233,9 +220,9 @@ function renderDashboard() {
   // Stats
   document.getElementById('dashStats').innerHTML = `
     <div class="stat-card">
-      <div class="stat-label">Revenue (Paid)</div>
+      <div class="stat-label">Revenue · ${MONTH_NAMES[month]}</div>
       <div class="stat-val">₱${revenue.toLocaleString()}</div>
-      <div class="stat-sub">${MONTH_NAMES[month]}</div>
+      <div class="stat-sub">Paid transactions</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Pending</div>
@@ -254,77 +241,42 @@ function renderDashboard() {
     </div>
   `;
 
-  // Mini calendar
-  renderMiniCal(year, month, monthTx);
-
   // Unpaid
   const unpaid = DB.transactions.filter(t => !t.paid);
   document.getElementById('unpaidCount').textContent = unpaid.length;
-  const ubody = document.getElementById('unpaidBody');
-  if (!unpaid.length) {
-    ubody.innerHTML = '<tr class="empty"><td colspan="4" style="text-align:center;padding:24px;color:var(--text3);">All caught up — no unpaid transactions.</td></tr>';
-  } else {
-    ubody.innerHTML = unpaid.map(t => `
-      <tr>
-        <td style="font-weight:600;">${t.customer}</td>
-        <td class="muted">${t.date || '—'}</td>
-        <td class="mono">₱${t.total.toLocaleString()}</td>
-        <td><button class="btn btn-sm" onclick="markPaid(${t.id})">Mark paid</button></td>
-      </tr>
-    `).join('');
-  }
+  document.getElementById('unpaidBody').innerHTML = unpaid.length
+    ? unpaid.map(t => `
+        <tr>
+          <td style="font-weight:600;">${t.customer}</td>
+          <td class="muted">${t.date || '—'}</td>
+          <td class="mono">₱${t.total.toLocaleString()}</td>
+          <td><button class="btn btn-sm" onclick="markPaid(${t.id})">Mark paid</button></td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="4" style="text-align:center;padding:28px 12px;color:var(--text3);">All caught up — no unpaid transactions.</td></tr>';
 
-  // Recent
-  const recentEl = document.getElementById('recentList');
+  // Recent (last 8)
   const recent   = DB.transactions.slice(0, 8);
-  if (!recent.length) {
-    recentEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px 0;">No transactions yet. Add one with the button above.</div>';
-  } else {
-    recentEl.innerHTML = recent.map(t => `
-      <div class="recent-item">
-        <div>
-          <div class="recent-name">${t.customer}</div>
-          <div class="recent-meta">${t.date || ''}${t.staff ? ' · ' + t.staff : ''} · ${t.loads} load${t.loads > 1 ? 's' : ''}</div>
+  const recentEl = document.getElementById('recentList');
+  recentEl.innerHTML = recent.length
+    ? recent.map(t => `
+        <div class="recent-item">
+          <div>
+            <div class="recent-name">${t.customer}</div>
+            <div class="recent-meta">${t.date || ''}${t.staff ? ' · ' + t.staff : ''} · ${t.loads} load${t.loads > 1 ? 's' : ''}</div>
+          </div>
+          <div>
+            <div class="recent-amt">₱${t.total.toLocaleString()}</div>
+            <div class="recent-status"><span class="badge ${t.paid ? 'badge-paid' : 'badge-unpaid'}">${t.paid ? 'Paid' : 'Unpaid'}</span></div>
+          </div>
         </div>
-        <div style="text-align:right;">
-          <div class="recent-amt">₱${t.total.toLocaleString()}</div>
-          <div style="margin-top:3px;"><span class="badge ${t.paid ? 'badge-paid' : 'badge-unpaid'}">${t.paid ? 'Paid' : 'Unpaid'}</span></div>
-        </div>
-      </div>
-    `).join('');
-  }
+      `).join('')
+    : '<div style="color:var(--text3);font-size:13px;padding:20px 0;">No transactions yet.</div>';
 }
 
-function renderMiniCal(year, month, monthTx) {
-  const byDate = {};
-  monthTx.forEach(t => { if (t.date) byDate[t.date] = (byDate[t.date] || 0) + 1; });
-
-  const firstDay    = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today       = new Date();
-
-  let html = '<div class="mini-cal-grid">';
-  DAY_NAMES.forEach(d => { html += `<div class="mini-dh">${d[0]}</div>`; });
-  for (let i = 0; i < firstDay; i++) html += '<div class="mini-day empty">·</div>';
-  for (let d = 1; d <= daysInMonth; d++) {
-    const ds      = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const hasData = !!byDate[ds];
-    const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-    const cls     = [hasData ? 'has-data' : '', isToday ? 'is-today' : ''].join(' ');
-    const click   = hasData
-      ? `onclick="guardedShowPage('calendar', document.getElementById('nav-calendar')); setTimeout(()=>{calYear=${year};calMonth=${month};renderCalendar();openDayPanel('${ds}')},200)"`
-      : '';
-    html += `<div class="mini-day ${cls}" ${click}>${d}</div>`;
-  }
-  html += '</div>';
-  document.getElementById('miniCal').innerHTML = html;
-}
-
-
-// ══════════════════════════════
-//  CALENDAR
-// ══════════════════════════════
-
+// ══════════════════════════════════════════════════
+//  CALENDAR (rendered inside modal)
+// ══════════════════════════════════════════════════
 function changeMonth(dir) {
   calMonth += dir;
   if (calMonth > 11) { calMonth = 0; calYear++; }
@@ -342,6 +294,7 @@ function goToToday() {
 
 function renderCalendar() {
   document.getElementById('calTitle').textContent = MONTH_NAMES[calMonth] + ' ' + calYear;
+  // calModalTitle removed from HTML - no-op
 
   const monthTx = DB.transactions.filter(t => {
     if (!t.date) return false;
@@ -358,26 +311,14 @@ function renderCalendar() {
   }).reduce((s, e) => s + e.amount * e.qty, 0);
 
   document.getElementById('calStats').innerHTML = `
-    <div class="stat-card">
-      <div class="stat-label">Revenue</div>
-      <div class="stat-val" style="font-size:20px;">₱${revenue.toLocaleString()}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Pending</div>
-      <div class="stat-val" style="font-size:20px;color:var(--amber)">₱${pending.toLocaleString()}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Expenses</div>
-      <div class="stat-val" style="font-size:20px;">₱${expMonth.toLocaleString()}</div>
-    </div>
+    <div class="cal-stat"><div class="cal-stat-label">Revenue</div><div class="cal-stat-val">₱${revenue.toLocaleString()}</div></div>
+    <div class="cal-stat"><div class="cal-stat-label">Pending</div><div class="cal-stat-val" style="color:var(--amber)">₱${pending.toLocaleString()}</div></div>
+    <div class="cal-stat"><div class="cal-stat-label">Expenses</div><div class="cal-stat-val">₱${expMonth.toLocaleString()}</div></div>
   `;
 
   // Group by date
   const byDate = {};
-  monthTx.forEach(t => {
-    if (!byDate[t.date]) byDate[t.date] = [];
-    byDate[t.date].push(t);
-  });
+  monthTx.forEach(t => { if (!byDate[t.date]) byDate[t.date] = []; byDate[t.date].push(t); });
 
   const firstDay    = new Date(calYear, calMonth, 1).getDay();
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
@@ -387,20 +328,18 @@ function renderCalendar() {
   let html = '';
   DAY_NAMES.forEach(d => { html += `<div class="cal-dh">${d}</div>`; });
 
-  // prev month overflow
+  // Prev month overflow
   for (let i = firstDay - 1; i >= 0; i--) {
     html += `<div class="cal-day other-month"><div class="cal-day-num">${prevDays - i}</div></div>`;
   }
 
-  // this month
+  // This month
   for (let d = 1; d <= daysInMonth; d++) {
-    const ds      = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dayTx   = byDate[ds] || [];
-    const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
-    const hasData = dayTx.length > 0;
+    const ds       = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayTx    = byDate[ds] || [];
+    const isToday  = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
+    const hasData  = dayTx.length > 0;
     const dayTotal = dayTx.reduce((s, t) => s + t.total, 0);
-
-    const dayNumHtml = isToday ? `<span class="cal-day-num">${d}</span>` : `<div class="cal-day-num">${d}</div>`;
 
     let chips = dayTx.slice(0, 3).map(t => `<div class="cal-chip">${t.customer}</div>`).join('');
     if (dayTx.length > 3) chips += `<div class="cal-chip" style="background:var(--surface2);color:var(--text3);">+${dayTx.length - 3} more</div>`;
@@ -408,14 +347,14 @@ function renderCalendar() {
     html += `
       <div class="cal-day ${isToday ? 'is-today' : ''} ${hasData ? 'has-data' : ''}"
            ${hasData ? `onclick="openDayPanel('${ds}')"` : ''}>
-        ${dayNumHtml}
+        <div class="cal-day-num">${d}</div>
         ${chips}
         ${hasData ? `<div class="cal-day-total">₱${dayTotal.toLocaleString()}</div>` : ''}
       </div>
     `;
   }
 
-  // next month overflow
+  // Next month overflow
   const totalCells = firstDay + daysInMonth;
   const remainder  = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
   for (let i = 1; i <= remainder; i++) {
@@ -428,36 +367,35 @@ function renderCalendar() {
 function openDayPanel(dateStr) {
   const dayTx = DB.transactions.filter(t => t.date === dateStr);
   const d     = new Date(dateStr + 'T00:00:00');
-  const label = d.toLocaleDateString('en-PH', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  document.getElementById('dayPanelTitle').textContent =
+    d.toLocaleDateString('en-PH', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
 
-  document.getElementById('dayPanelTitle').textContent = label;
-  document.getElementById('dayPanelBody').innerHTML = dayTx.length ? dayTx.map(t => `
-    <tr>
-      <td style="font-weight:600;">${t.customer}</td>
-      <td class="muted">${t.staff || '—'}</td>
-      <td>${t.loads}</td>
-      <td class="mono">₱${t.total.toLocaleString()}</td>
-      <td><span class="badge ${t.paid ? 'badge-paid' : 'badge-unpaid'}">${t.paid ? 'Paid' : 'Unpaid'}</span></td>
-    </tr>
-  `).join('') : '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">No transactions this day.</td></tr>';
+  document.getElementById('dayPanelBody').innerHTML = dayTx.length
+    ? dayTx.map(t => `
+        <tr>
+          <td style="font-weight:600;">${t.customer}</td>
+          <td class="muted">${t.staff || '—'}</td>
+          <td>${t.loads}</td>
+          <td class="mono">₱${t.total.toLocaleString()}</td>
+          <td><span class="badge ${t.paid ? 'badge-paid' : 'badge-unpaid'}">${t.paid ? 'Paid' : 'Unpaid'}</span></td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">No transactions this day.</td></tr>';
 
   document.getElementById('dayPanel').style.display = 'block';
-  document.getElementById('dayPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function closeDayPanel() {
   document.getElementById('dayPanel').style.display = 'none';
 }
 
-
-// ══════════════════════════════
+// ══════════════════════════════════════════════════
 //  RECEIPTS
-// ══════════════════════════════
-
+// ══════════════════════════════════════════════════
 function populateMonthFilter() {
   const months = [...new Set(DB.transactions.map(t => t.date ? t.date.slice(0,7) : null).filter(Boolean))].sort().reverse();
-  const sel    = document.getElementById('filterMonth');
-  const cur    = sel.value;
+  const sel = document.getElementById('filterMonth');
+  const cur = sel.value;
   sel.innerHTML = '<option value="">All months</option>' +
     months.map(m => {
       const [y, mo] = m.split('-');
@@ -469,18 +407,18 @@ function renderReceipts() {
   const search = (document.getElementById('searchInput').value || '').toLowerCase();
   const fPaid  = document.getElementById('filterPaid').value;
   const fMonth = document.getElementById('filterMonth').value;
-  const tbody  = document.getElementById('receiptsBody');
 
   const filtered = DB.transactions.filter(t => {
-    const text    = (t.customer + ' ' + t.staff + ' ' + t.notes).toLowerCase();
-    const mTxt    = !search || text.includes(search);
-    const mPaid   = fPaid  === '' || String(t.paid) === fPaid;
-    const mMonth  = !fMonth || (t.date && t.date.startsWith(fMonth));
+    const text   = (t.customer + ' ' + t.staff + ' ' + t.notes).toLowerCase();
+    const mTxt   = !search || text.includes(search);
+    const mPaid  = fPaid  === '' || String(t.paid) === fPaid;
+    const mMonth = !fMonth || (t.date && t.date.startsWith(fMonth));
     return mTxt && mPaid && mMonth;
   });
 
+  const tbody = document.getElementById('receiptsBody');
   if (!filtered.length) {
-    tbody.innerHTML = '<tr class="empty"><td colspan="9" style="text-align:center;padding:40px;color:var(--text3);">No transactions found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3);">No transactions found.</td></tr>';
     return;
   }
 
@@ -505,26 +443,20 @@ function renderReceipts() {
   `).join('');
 }
 
-
-// ══════════════════════════════
+// ══════════════════════════════════════════════════
 //  EXPENSES
-// ══════════════════════════════
-
+// ══════════════════════════════════════════════════
 function addExpense() {
   const name   = document.getElementById('eName').value.trim();
   const amount = parseFloat(document.getElementById('eAmount').value);
   if (!name || !amount) { toast('⚠️ Fill in description and amount.'); return; }
 
   DB.expenses.push({
-    id:     Date.now(),
+    id: Date.now(),
     date:   document.getElementById('eDate').value,
-    name,
-    qty:    parseInt(document.getElementById('eQty').value) || 1,
-    amount
+    name, qty: parseInt(document.getElementById('eQty').value) || 1, amount
   });
-  saveData();
-  toast('✅ Expense added.');
-  renderExpenses();
+  saveData(); toast('✅ Expense added.'); renderExpenses();
   document.getElementById('eName').value   = '';
   document.getElementById('eAmount').value = '';
   document.getElementById('eQty').value    = 1;
@@ -533,9 +465,7 @@ function addExpense() {
 function deleteExpense(id) {
   if (!confirm('Delete this expense?')) return;
   DB.expenses = DB.expenses.filter(e => e.id !== id);
-  saveData();
-  toast('🗑 Expense deleted.');
-  renderExpenses();
+  saveData(); toast('🗑 Expense deleted.'); renderExpenses();
 }
 
 function renderExpenses() {
