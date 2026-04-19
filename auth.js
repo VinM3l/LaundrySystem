@@ -1,33 +1,28 @@
-// ─── AUTH — Login & Role Access Control ──────────────────────────────────────
-//
-// ROLES:
-//   owner  → full access to everything
-//   staff  → add transactions only (no expenses, no summary financials, no delete)
-//
-// TO CHANGE PASSWORDS: edit the ACCOUNTS object below.
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+// Change passwords here. Plain text is fine for a local internal tool.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ACCOUNTS = {
   owner: { password: 'owner123', role: 'owner', label: 'Owner' },
-  staff: { password: 'staff123', role: 'staff', label: 'Staff' },
+  staff: { password: 'staff123', role: 'staff', label: 'Staff'  },
 };
 
 const ROLE_PAGES = {
-  owner: ['dashboard', 'calendar', 'receipts', 'expenses'],
+  owner: ['dashboard', 'receipts', 'expenses'],
   staff: ['dashboard', 'receipts'],
 };
 
 let currentUser = null;
 
 function loadSession() {
-  try { const s = sessionStorage.getItem('Laundry_session'); if (s) currentUser = JSON.parse(s); } catch(e) {}
+  try { const s = sessionStorage.getItem('laundry_session'); if (s) currentUser = JSON.parse(s); } catch(e) {}
 }
 function saveSession() {
-  try { sessionStorage.setItem('Laundry_session', JSON.stringify(currentUser)); } catch(e) {}
+  try { sessionStorage.setItem('laundry_session', JSON.stringify(currentUser)); } catch(e) {}
 }
 function clearSession() {
   currentUser = null;
-  try { sessionStorage.removeItem('Laundry_session'); } catch(e) {}
+  try { sessionStorage.removeItem('laundry_session'); } catch(e) {}
 }
 
 function isOwner()       { return currentUser?.role === 'owner'; }
@@ -37,8 +32,8 @@ function tryLogin() {
   const username = document.getElementById('loginUsername').value.trim().toLowerCase();
   const password = document.getElementById('loginPassword').value;
   const errEl    = document.getElementById('loginError');
+  const account  = ACCOUNTS[username];
 
-  const account = ACCOUNTS[username];
   if (!account || account.password !== password) {
     errEl.textContent = 'Incorrect username or password.';
     errEl.style.display = 'block';
@@ -75,33 +70,29 @@ function showApp() {
 
 function applyRoleUI() {
   document.getElementById('sessionUser').textContent = currentUser.label;
+  document.getElementById('sessionAvatar').textContent = currentUser.label[0].toUpperCase();
   document.getElementById('sessionRole').textContent = currentUser.role === 'owner' ? '🛡 Owner' : '👤 Staff';
 
-  // Hide owner-only nav items from staff
-  const ownerOnly = ['nav-expenses', 'nav-calendar'];
-  ownerOnly.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = isOwner() ? '' : 'none';
-  });
+  // Hide expenses nav from staff
+  const expNav = document.getElementById('nav-expenses');
+  if (expNav) expNav.style.display = isOwner() ? '' : 'none';
 }
 
 function guardedShowPage(page, el) {
   if (!canAccess(page)) {
-    toast('🚫 You don\'t have access to that page');
+    toast('🚫 You don\'t have access to that page.');
     return;
   }
   showPage(page, el);
 }
 
-function bootAuth() {
+// Boot on load
+document.addEventListener('DOMContentLoaded', () => {
+  // Enter key on login
+  ['loginPassword','loginUsername'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+  });
   loadSession();
   if (currentUser) { showApp(); } else { showLogin(); }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  const pw = document.getElementById('loginPassword');
-  if (pw) pw.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
-  const un = document.getElementById('loginUsername');
-  if (un) un.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
-  bootAuth();
 });

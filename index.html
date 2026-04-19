@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Laundry PMS</title>
+  <title>Laundry</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<!-- ── LOGIN ── -->
+<!-- ══ LOGIN ══ -->
 <div id="loginScreen" class="login-screen">
   <div class="login-card">
     <div class="login-brand">
       <div class="login-logo">🧺</div>
-      <div class="login-brand-name">Laundry<span>PMS</span></div>
-      <div class="login-brand-sub">Laundry Management System</div>
+      <div class="login-brand-name">Laundry</div>
+      <div class="login-brand-sub">Management System</div>
     </div>
     <div class="login-form">
       <div class="form-group">
@@ -23,7 +23,7 @@
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
-        <input class="form-input" id="loginPassword" type="password" placeholder="Enter password" autocomplete="current-password">
+        <input class="form-input" id="loginPassword" type="password" placeholder="Enter password">
       </div>
       <p id="loginError" class="login-error" style="display:none"></p>
       <button class="btn btn-primary login-submit" onclick="tryLogin()">Sign in</button>
@@ -32,23 +32,23 @@
   </div>
 </div>
 
-<!-- ── APP SHELL ── -->
+<!-- ══ APP SHELL ══ -->
 <div id="appShell" class="shell" style="display:none">
 
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <div class="brand-name">Laundry<span>PMS</span></div>
-      <div class="brand-sub">Laundry Manager</div>
+      <div class="brand-icon">🧺</div>
+      <div>
+        <div class="brand-name">Laundry</div>
+        <div class="brand-sub">Management System</div>
+      </div>
     </div>
 
     <nav class="sidebar-nav">
-      <div class="nav-label">Views</div>
+      <div class="nav-label">Navigation</div>
       <button class="nav-btn active" id="nav-dashboard" onclick="guardedShowPage('dashboard',this)">
         <span class="nav-icon">📋</span><span>Dashboard</span>
-      </button>
-      <button class="nav-btn" id="nav-calendar" onclick="guardedShowPage('calendar',this)">
-        <span class="nav-icon">📅</span><span>Calendar</span>
       </button>
       <button class="nav-btn" id="nav-receipts" onclick="guardedShowPage('receipts',this)">
         <span class="nav-icon">🧾</span><span>Receipts</span>
@@ -58,20 +58,22 @@
       </button>
     </nav>
 
-    <div class="session-widget">
-      <div class="session-info">
-        <span class="session-user" id="sessionUser"></span>
-        <span class="session-role" id="sessionRole"></span>
+    <div class="sidebar-bottom">
+      <div class="session-widget">
+        <div class="session-avatar" id="sessionAvatar">?</div>
+        <div class="session-info">
+          <span class="session-user" id="sessionUser"></span>
+          <span class="session-role" id="sessionRole"></span>
+        </div>
+        <button class="logout-btn" onclick="logout()" title="Sign out">↩</button>
       </div>
-      <button class="logout-btn" onclick="logout()" title="Sign out">↩</button>
-    </div>
-
-    <div class="sidebar-footer">
-      <div class="footer-date" id="sidebarDate"></div>
+      <div class="sidebar-footer">
+        <div class="footer-date" id="sidebarDate"></div>
+      </div>
     </div>
   </aside>
 
-  <!-- MAIN -->
+  <!-- CONTENT -->
   <div class="content">
 
     <!-- TOPBAR -->
@@ -79,70 +81,44 @@
       <button class="hamburger" onclick="toggleSidebar()">☰</button>
       <span class="topbar-title" id="pageTitle">Dashboard</span>
       <div class="topbar-right">
-        <button class="add-btn" onclick="openModal()">+ New Transaction</button>
+        <button class="cal-btn" onclick="openCalModal()">
+          <span>📅</span> Calendar
+        </button>
+        <button class="add-btn" onclick="openTxModal()">+ New Transaction</button>
       </div>
     </div>
 
-    <!-- SCROLLABLE MAIN -->
+    <!-- MAIN -->
     <div class="main">
 
-      <!-- ── DASHBOARD ── -->
+      <!-- ══ DASHBOARD ══ -->
       <div class="page active" id="page-dashboard">
+
         <div class="stats-row" id="dashStats"></div>
+
         <div class="dash-grid">
-          <div class="dash-left">
-            <!-- Mini Calendar -->
-            <div class="panel-card">
-              <div class="section-title">This Month <span id="dashMonthLabel" style="font-weight:400;color:var(--text3);font-size:12px;"></span></div>
-              <div id="miniCal"></div>
+          <div class="panel-card">
+            <div class="section-title">
+              Unpaid Transactions
+              <span class="count-badge" id="unpaidCount">0</span>
             </div>
-            <!-- Unpaid -->
-            <div class="panel-card" style="margin-top:12px;">
-              <div class="section-title">
-                Unpaid
-                <span id="unpaidCount" class="count-badge">0</span>
-              </div>
+            <div class="table-wrap">
               <table class="data-table">
                 <thead><tr><th>Customer</th><th>Date</th><th>Amount</th><th></th></tr></thead>
                 <tbody id="unpaidBody"></tbody>
               </table>
             </div>
           </div>
-          <div class="dash-right">
-            <!-- Recent -->
-            <div class="panel-card">
-              <div class="section-title">Recent Transactions</div>
-              <div id="recentList"></div>
-            </div>
+
+          <div class="panel-card">
+            <div class="section-title">Recent Transactions</div>
+            <div id="recentList"></div>
           </div>
         </div>
+
       </div>
 
-      <!-- ── CALENDAR ── -->
-      <div class="page" id="page-calendar">
-        <div class="cal-topbar">
-          <button class="cal-nav-btn" onclick="changeMonth(-1)">←</button>
-          <span class="cal-month-label" id="calTitle"></span>
-          <button class="cal-nav-btn" onclick="changeMonth(1)">→</button>
-          <button class="today-btn" onclick="goToToday()">Today</button>
-        </div>
-        <div class="cal-stats-row" id="calStats"></div>
-        <div class="cal-grid-wrap">
-          <div class="cal-grid" id="calGrid"></div>
-        </div>
-        <div id="dayPanel" class="day-panel" style="display:none">
-          <div class="day-panel-head">
-            <span id="dayPanelTitle"></span>
-            <button class="modal-close" onclick="closeDayPanel()">✕</button>
-          </div>
-          <table class="data-table">
-            <thead><tr><th>Customer</th><th>Staff</th><th>Loads</th><th>Total</th><th>Status</th></tr></thead>
-            <tbody id="dayPanelBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ── RECEIPTS ── -->
+      <!-- ══ RECEIPTS ══ -->
       <div class="page" id="page-receipts">
         <div class="filters-row">
           <div class="search-wrap">
@@ -168,7 +144,7 @@
         </div>
       </div>
 
-      <!-- ── EXPENSES ── -->
+      <!-- ══ EXPENSES ══ -->
       <div class="page" id="page-expenses">
         <div class="panel-card" style="margin-bottom:14px;">
           <div class="section-title">Add Expense</div>
@@ -177,7 +153,7 @@
             <div class="form-group"><label class="form-label">Description</label><input class="form-input" type="text" id="eName" placeholder="e.g. Gas, Machine Repair"></div>
             <div class="form-group"><label class="form-label">Qty</label><input class="form-input" type="number" id="eQty" value="1" min="1"></div>
             <div class="form-group"><label class="form-label">Amount (₱)</label><input class="form-input" type="number" id="eAmount" placeholder="0"></div>
-            <button class="btn btn-primary exp-add-btn" onclick="addExpense()">Add</button>
+            <button class="btn btn-primary" style="align-self:flex-end;white-space:nowrap;" onclick="addExpense()">Add</button>
           </div>
         </div>
         <div class="table-card">
@@ -192,21 +168,21 @@
   </div><!-- /content -->
 </div><!-- /appShell -->
 
-<!-- ── MODAL: NEW TRANSACTION ── -->
-<div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
-  <div class="modal" id="modal">
+
+<!-- ══ MODAL: NEW TRANSACTION ══ -->
+<div class="overlay" id="txOverlay" onclick="handleTxOverlayClick(event)">
+  <div class="modal" id="txModal">
     <div class="modal-head">
       <div>
         <div class="modal-title">New Transaction</div>
-        <div class="modal-sub" id="modalSub"></div>
+        <div class="modal-sub" id="txModalSub"></div>
       </div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+      <button class="modal-close" onclick="closeTxModal()">✕</button>
     </div>
     <div class="modal-body">
 
-      <!-- Row 1 -->
-      <div class="form-row-label">Transaction Info</div>
-      <div class="form-grid form-grid-3">
+      <div class="form-section-label">Transaction Info</div>
+      <div class="form-grid-3">
         <div class="form-group">
           <label class="form-label">Date</label>
           <input class="form-input" type="date" id="tDate" onchange="updateWeekday()">
@@ -228,13 +204,13 @@
       </div>
 
       <div class="form-divider"></div>
-      <div class="form-row-label">Customer</div>
+      <div class="form-section-label">Customer Details</div>
 
-      <div class="form-group form-full">
+      <div class="form-group" style="margin-bottom:12px;">
         <label class="form-label">Customer Name</label>
         <input class="form-input" type="text" id="tCustomer" placeholder="Enter name">
       </div>
-      <div class="form-grid" style="margin-top:12px;">
+      <div class="form-grid" style="margin-bottom:12px;">
         <div class="form-group">
           <label class="form-label">Weight (kg)</label>
           <input class="form-input" type="number" id="tWeight" step="0.1" min="0" placeholder="0.0">
@@ -244,7 +220,7 @@
           <input class="form-input" type="text" id="tMachine" placeholder="e.g. 1, 2, 3">
         </div>
       </div>
-      <div class="form-grid form-grid-3" style="margin-top:12px;">
+      <div class="form-grid-3" style="margin-bottom:12px;">
         <div class="form-group">
           <label class="form-label">No. of Loads</label>
           <input class="form-input" type="number" id="tLoads" min="1" value="1" oninput="calcPrice()">
@@ -257,14 +233,14 @@
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Extra/load?</label>
+          <label class="form-label">Extra / load?</label>
           <select class="form-select" id="tPload" onchange="calcPrice()">
             <option value="0">No</option>
             <option value="1">Yes (+₱20)</option>
           </select>
         </div>
       </div>
-      <div class="form-grid" style="margin-top:12px;">
+      <div class="form-grid" style="margin-bottom:12px;">
         <div class="form-group">
           <label class="form-label">Half price?</label>
           <select class="form-select" id="tHalf" onchange="calcPrice()">
@@ -278,7 +254,6 @@
         </div>
       </div>
 
-      <!-- Price bar -->
       <div class="price-bar">
         <div>
           <div class="price-bar-label">Computed Total</div>
@@ -287,13 +262,13 @@
         <div class="price-bar-value" id="priceDisplay">₱0</div>
       </div>
 
-      <div class="form-grid" style="margin-top:12px;">
+      <div class="form-grid" style="margin-top:14px;">
         <div class="form-group">
-          <label class="form-label">Payment received (₱)</label>
+          <label class="form-label">Payment Received (₱)</label>
           <input class="form-input" type="number" id="tPay" placeholder="0" min="0">
         </div>
         <div class="form-group">
-          <label class="form-label">Payment status</label>
+          <label class="form-label">Payment Status</label>
           <select class="form-select" id="tPaid">
             <option value="0">Unpaid</option>
             <option value="1">Paid</option>
@@ -301,13 +276,49 @@
         </div>
       </div>
 
-    </div><!-- /modal-body -->
+    </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="resetForm()">Clear</button>
+      <button class="btn btn-ghost" onclick="resetTxForm()">Clear</button>
       <button class="btn btn-primary" onclick="addTransaction()">Save Transaction</button>
     </div>
   </div>
 </div>
+
+
+<!-- ══ MODAL: CALENDAR ══ -->
+<div class="overlay" id="calOverlay" onclick="handleCalOverlayClick(event)">
+  <div class="modal modal-wide" id="calModal">
+    <div class="modal-head">
+      <div class="cal-modal-head-left">
+        <button class="cal-nav-btn" onclick="changeMonth(-1)">←</button>
+        <div class="modal-title" id="calTitle"></div>
+        <button class="cal-nav-btn" onclick="changeMonth(1)">→</button>
+        <button class="today-btn" onclick="goToToday()">Today</button>
+      </div>
+      <button class="modal-close" onclick="closeCalModal()">✕</button>
+    </div>
+
+    <div class="cal-stats-bar" id="calStats"></div>
+
+    <div class="modal-body cal-modal-body">
+      <div class="cal-grid-wrap">
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+
+      <div id="dayPanel" class="day-panel" style="display:none">
+        <div class="day-panel-head">
+          <span id="dayPanelTitle"></span>
+          <button class="modal-close" style="width:24px;height:24px;font-size:13px;" onclick="closeDayPanel()">✕</button>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Customer</th><th>Staff</th><th>Loads</th><th>Total</th><th>Status</th></tr></thead>
+          <tbody id="dayPanelBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <!-- mobile sidebar overlay -->
 <div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
