@@ -1,332 +1,1215 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Laundry</title>
-  <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RestaurantOS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ── RESET & TOKENS ──────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F0F0EE;--surface:#FFFFFF;--surface2:#F5F5F3;--surface3:#EBEBEA;
+  --border:#DCDCDB;--border2:#C8C8C7;
+  --text:#1A1A19;--text2:#5A5A58;--text3:#9A9A98;
+  --sidebar:#212120;--sidebar2:#2D2D2B;--sidebar3:#3A3A38;
+  --accent:#1A1A19;
+  --green:#166534;--green-bg:#F0FDF4;--green-bd:#BBF7D0;
+  --red:#991B1B;--red-bg:#FFF5F5;--red-bd:#FECACA;
+  --amber:#92400E;--amber-bg:#FFFBEB;--amber-bd:#FDE68A;
+  --blue:#1E3A8A;--blue-bg:#EFF6FF;--blue-bd:#BFDBFE;
+  --shadow:0 1px 2px rgba(0,0,0,.05);
+  --shadow-md:0 4px 16px rgba(0,0,0,.08);
+  --r:6px;--rs:4px;
+  --font:'IBM Plex Sans',sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+/* ── LAYOUT ──────────────────────────────────────────────────── */
+.shell{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:210px;background:var(--sidebar);display:flex;flex-direction:column;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:50px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:20px}
+/* ── SIDEBAR ─────────────────────────────────────────────────── */
+.brand{padding:18px 16px 14px;border-bottom:1px solid var(--sidebar3)}
+.brand-name{font-size:15px;font-weight:700;color:#fff;letter-spacing:-.2px}
+.brand-sub{font-size:10px;color:rgba(255,255,255,.3);letter-spacing:1.5px;text-transform:uppercase;margin-top:1px;font-family:var(--mono)}
+.rest-sel{padding:10px 12px;border-bottom:1px solid var(--sidebar3)}
+.rest-sel label{font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.2px;display:block;margin-bottom:4px;font-weight:600}
+.rest-sel select{width:100%;background:var(--sidebar2);border:1px solid var(--sidebar3);color:#fff;font-family:var(--font);font-size:12px;padding:5px 8px;border-radius:var(--rs);cursor:pointer}
+.rest-sel select option{background:var(--sidebar2)}
+nav{padding:8px 6px;flex:1;overflow-y:auto}
+.nav-sec{font-size:9px;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.4px;padding:10px 8px 4px;font-weight:700;font-family:var(--mono)}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--rs);cursor:pointer;color:rgba(255,255,255,.5);font-size:12px;font-weight:500;transition:all .12s;margin-bottom:1px;position:relative}
+.nav-item:hover{background:var(--sidebar2);color:rgba(255,255,255,.85)}
+.nav-item.active{background:var(--sidebar3);color:#fff;font-weight:600}
+.nav-icon{font-size:12px;width:15px;text-align:center;opacity:.6}
+.nav-item.active .nav-icon{opacity:1}
+.nav-badge{position:absolute;right:7px;background:#DC2626;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:20px}
+.sidebar-foot{padding:10px 12px;border-top:1px solid var(--sidebar3);font-size:10px;color:rgba(255,255,255,.2);font-family:var(--mono)}
+/* ── TOPBAR ──────────────────────────────────────────────────── */
+.topbar-title{font-size:14px;font-weight:700;letter-spacing:-.2px}
+.topbar-date{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.topbar-right{display:flex;gap:7px;align-items:center}
+/* ── BUTTONS ─────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--rs);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .12s;white-space:nowrap}
+.btn-dark{background:var(--text);color:#fff}.btn-dark:hover{background:#333}
+.btn-light{background:var(--surface);color:var(--text);border:1px solid var(--border2)}.btn-light:hover{background:var(--surface2)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}.btn-red:hover{background:#FFE4E4}
+.btn-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}.btn-green:hover{background:#DCFCE7}
+.btn-sm{padding:4px 9px;font-size:11px}
+.btn-xs{padding:2px 7px;font-size:10px}
+/* ── CARDS ───────────────────────────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
+.card-sm{padding:12px 14px}
+.panel{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r)}
+/* ── TABLES ──────────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;padding:8px 10px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono)}
+td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+/* ── FORMS ───────────────────────────────────────────────────── */
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;font-family:var(--mono)}
+.field input,.field select,.field textarea{border:1px solid var(--border2);border-radius:var(--rs);padding:6px 9px;font-family:var(--font);font-size:12px;font-weight:500;background:var(--surface);color:var(--text);outline:none}
+.field input:focus,.field select:focus{border-color:var(--text);box-shadow:0 0 0 2px rgba(0,0,0,.06)}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.fg4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+.ro{background:var(--surface2)!important;color:var(--text3)!important}
+/* ── MODAL ───────────────────────────────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-md);width:600px;max-width:95vw;max-height:92vh;overflow-y:auto}
+.modal-wide{width:720px}
+.modal-head{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-title{font-size:14px;font-weight:700}
+.modal-body{padding:16px 20px}
+.modal-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.xbtn{background:none;border:none;cursor:pointer;font-size:17px;color:var(--text3);padding:2px}.xbtn:hover{color:var(--text)}
+/* ── MISC ────────────────────────────────────────────────────── */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-title{font-size:13px;font-weight:700;letter-spacing:-.1px}
+.divider{height:1px;background:var(--border);margin:12px 0}
+.pill{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:var(--surface3);color:var(--text2);border:1px solid var(--border2)}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700}
+.bg-green{background:var(--green-bg);color:var(--green)}
+.bg-red{background:var(--red-bg);color:var(--red)}
+.bg-amber{background:var(--amber-bg);color:var(--amber)}
+.bg-blue{background:var(--blue-bg);color:var(--blue)}
+.tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;font-family:var(--mono)}
+.notif{position:fixed;bottom:18px;right:18px;background:var(--text);color:#fff;padding:9px 14px;border-radius:var(--r);font-size:12px;font-weight:600;box-shadow:var(--shadow-md);z-index:200;animation:fadeUp .18s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.search-wrap{position:relative}.search-wrap input{padding-left:25px;width:180px}
+.s-ic{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:12px;pointer-events:none}
+.prog-wrap{height:4px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.prog-bar{height:100%;border-radius:2px;transition:width .3s}
+.info-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.info-row:last-child{border-bottom:none}
+.info-label{color:var(--text2);font-weight:500}
+.mono{font-family:var(--mono)}
+.hbar{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.hbar-lbl{font-size:11px;font-weight:600;width:100px;color:var(--text2);text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar-bg{flex:1;background:var(--surface3);border-radius:2px;height:5px}
+.hbar-fill{height:5px;border-radius:2px}
+.hbar-val{font-size:11px;font-weight:700;min-width:65px;text-align:right;font-family:var(--mono)}
+.stat-grid{display:grid;gap:10px;margin-bottom:16px}
+.sg4{grid-template-columns:repeat(4,1fr)}
+.sg5{grid-template-columns:repeat(5,1fr)}
+.stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px}
+.stat-label{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.9px;margin-bottom:4px;font-family:var(--mono)}
+.stat-value{font-size:22px;font-weight:700;font-family:var(--mono);letter-spacing:-.5px}
+.stat-sub{font-size:10px;color:var(--text3);margin-top:2px}
+/* ── ORDER SYSTEM ────────────────────────────────────────────── */
+.order-grid{display:grid;grid-template-columns:1fr 340px;gap:14px;height:calc(100vh - 50px - 40px);overflow:hidden}
+.menu-panel{overflow-y:auto;padding-right:2px}
+.cart-panel{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.cart-header{padding:14px 16px 12px;border-bottom:1px solid var(--border)}
+.cart-title{font-size:14px;font-weight:700}
+.cart-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.cart-items{flex:1;overflow-y:auto;padding:10px 0}
+.cart-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:12px;padding:20px}
+.cart-empty-icon{font-size:32px;margin-bottom:10px;opacity:.3}
+.cart-item{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border)}
+.cart-item:last-child{border-bottom:none}
+.cart-item-name{flex:1;font-size:12px;font-weight:600}
+.cart-item-price{font-size:12px;font-weight:700;font-family:var(--mono);min-width:70px;text-align:right}
+.qty-ctrl{display:flex;align-items:center;gap:0}
+.qty-btn{width:22px;height:22px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text2);transition:all .1s;border-radius:0}
+.qty-btn:first-child{border-radius:var(--rs) 0 0 var(--rs)}
+.qty-btn:last-child{border-radius:0 var(--rs) var(--rs) 0}
+.qty-btn:hover{background:var(--text);color:#fff;border-color:var(--text)}
+.qty-num{min-width:28px;text-align:center;font-size:12px;font-weight:700;font-family:var(--mono);border:1px solid var(--border2);border-left:none;border-right:none;padding:2px 4px;background:var(--surface)}
+.cart-footer{padding:14px 16px;border-top:1px solid var(--border)}
+.cart-total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cart-total-label{font-size:12px;color:var(--text2);font-weight:600}
+.cart-total-value{font-size:20px;font-weight:700;font-family:var(--mono)}
+.menu-cat-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin:14px 0 8px;font-family:var(--mono)}
+.menu-cat-title:first-child{margin-top:0}
+.dish-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:4px}
+.dish-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px;cursor:pointer;transition:all .12s;position:relative}
+.dish-card:hover{border-color:var(--text);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.dish-card.in-cart{border-color:var(--text);background:var(--surface2)}
+.dish-card.unavailable{opacity:.45;cursor:not-allowed}
+.dish-card.unavailable:hover{transform:none;box-shadow:none;border-color:var(--border)}
+.dish-name{font-size:12px;font-weight:700;margin-bottom:2px;line-height:1.3}
+.dish-cat{font-size:10px;color:var(--text3);margin-bottom:5px}
+.dish-price{font-size:13px;font-weight:700;font-family:var(--mono)}
+.dish-avail{font-size:9px;font-weight:600;font-family:var(--mono);margin-top:4px}
+.dish-avail.ok{color:var(--green)}
+.dish-avail.low{color:var(--amber)}
+.dish-avail.no{color:var(--red)}
+.cart-badge{position:absolute;top:6px;right:6px;background:var(--text);color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono)}
+/* ── STOCK SECTION ───────────────────────────────────────────── */
+.stock-row{padding:10px 14px;border-bottom:1px solid var(--border)}
+.stock-row:last-child{border-bottom:none}
+.stock-name{font-size:12px;font-weight:700}
+.stock-meta{display:flex;gap:12px;font-size:10px;color:var(--text3);margin-top:3px;font-family:var(--mono)}
+.stock-qty{font-size:13px;font-weight:700;font-family:var(--mono)}
+/* alert strip */
+.alert-strip{background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--rs);padding:8px 12px;display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:12px;font-weight:500;color:var(--red)}
+/* order history */
+.order-row{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px}
+.order-row:last-child{border-bottom:none}
+.order-num{font-size:10px;font-weight:700;font-family:var(--mono);color:var(--text3);min-width:50px}
+.order-dishes{flex:1;font-size:12px;font-weight:500;line-height:1.6}
+.order-total{font-size:13px;font-weight:700;font-family:var(--mono);color:var(--green);min-width:70px;text-align:right}
+/* ingr tracker */
+.ingr-item{padding:10px 14px;border-bottom:1px solid var(--border)}
+.ingr-item:last-child{border-bottom:none}
+.ingr-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.ingr-name{font-size:12px;font-weight:700}
+.ingr-qty{font-size:13px;font-weight:700;font-family:var(--mono)}
+.ingr-breakdown{display:flex;gap:10px;font-size:10px;font-family:var(--mono);color:var(--text3);flex-wrap:wrap}
+/* print-style order ticket */
+.ticket{font-family:var(--mono);font-size:12px;line-height:1.6;background:var(--surface2);border-radius:var(--rs);padding:12px;border:1px dashed var(--border2)}
+.ticket hr{border:none;border-top:1px dashed var(--border2);margin:8px 0}
+</style>
 </head>
 <body>
+<div class="shell">
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="brand"><div class="brand-name">RestaurantOS</div><div class="brand-sub">Admin · v5</div></div>
+  <div class="rest-sel"><label>Branch</label><select id="restSel" onchange="switchRest(this.value)"></select></div>
+  <nav>
+    <div class="nav-sec">Operations</div>
+    <div class="nav-item active" data-p="orders"    onclick="go('orders')">  <span class="nav-icon">🧾</span> Take Order</div>
+    <div class="nav-item"        data-p="history"   onclick="go('history')"> <span class="nav-icon">📋</span> Order History</div>
+    <div class="nav-sec">Stock</div>
+    <div class="nav-item"        data-p="stock"     onclick="go('stock')">   <span class="nav-icon">📦</span> Stock Levels <span class="nav-badge" id="alertBadge" style="display:none">0</span></div>
+    <div class="nav-item"        data-p="purchases" onclick="go('purchases')"><span class="nav-icon">↓</span> Purchases</div>
+    <div class="nav-sec">Setup</div>
+    <div class="nav-item"        data-p="menu"      onclick="go('menu')">    <span class="nav-icon">☰</span> Menu & Recipes</div>
+    <div class="nav-item"        data-p="items"     onclick="go('items')">   <span class="nav-icon">◈</span> Ingredients</div>
+    <div class="nav-item"        data-p="stats"     onclick="go('stats')">   <span class="nav-icon">◎</span> Reports</div>
+    <div class="nav-item"        data-p="branches"  onclick="go('branches')"><span class="nav-icon">⊕</span> Branches</div>
+  </nav>
+  <div class="sidebar-foot">Admin Panel</div>
+</aside>
 
-<!-- ══ LOGIN ══ -->
-<div id="loginScreen" class="login-screen">
-  <div class="login-card">
-    <div class="login-brand">
-      <div class="login-logo">🧺</div>
-      <div class="login-brand-name">Laundry</div>
-      <div class="login-brand-sub">Management System</div>
-    </div>
-    <div class="login-form">
-      <div class="form-group">
-        <label class="form-label">Username</label>
-        <input class="form-input" id="loginUsername" type="text" placeholder="Enter username" autocomplete="username">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input class="form-input" id="loginPassword" type="password" placeholder="Enter password">
-      </div>
-      <p id="loginError" class="login-error" style="display:none"></p>
-      <button class="btn btn-primary login-submit" onclick="tryLogin()">Sign in</button>
-    </div>
-    <div class="login-footer">Internal use only</div>
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div><div class="topbar-title" id="pgTitle">Take Order</div><div class="topbar-date" id="pgDate"></div></div>
+    <div class="topbar-right" id="pgActions"></div>
   </div>
+  <div class="content" id="pgContent"></div>
 </div>
+</div>
+<div id="modalWrap"></div>
+<div id="notifWrap"></div>
 
-<!-- ══ APP SHELL ══ -->
-<div id="appShell" class="shell" style="display:none">
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════════ */
+const S = {
+  page: 'orders',
+  rid:  'r1',
+  cart: [],   // [{mid, mname, price, qty}]
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-icon">🧺</div>
-      <div>
-        <div class="brand-name">Laundry</div>
-        <div class="brand-sub">Management System</div>
-      </div>
+  restaurants: {
+    r1: { id:'r1', name:'The Rustic Table', location:'Downtown' },
+    r2: { id:'r2', name:'Seaside Grill',    location:'Beachfront' },
+  },
+
+  // Ingredients / raw stock items
+  ingredients: {
+    r1: [
+      { id:'i1',  name:'Chicken Breast', cat:'Meat',    unit:'kg',  price:180, threshold:5  },
+      { id:'i2',  name:'Jasmine Rice',   cat:'Grains',  unit:'kg',  price:55,  threshold:10 },
+      { id:'i3',  name:'Cooking Oil',    cat:'Pantry',  unit:'L',   price:120, threshold:3  },
+      { id:'i4',  name:'Tomatoes',       cat:'Produce', unit:'kg',  price:65,  threshold:5  },
+      { id:'i5',  name:'Onions',         cat:'Produce', unit:'kg',  price:40,  threshold:5  },
+      { id:'i6',  name:'Pork Belly',     cat:'Meat',    unit:'kg',  price:220, threshold:4  },
+      { id:'i7',  name:'Kangkong',       cat:'Produce', unit:'kg',  price:30,  threshold:3  },
+      { id:'i8',  name:'Radish',         cat:'Produce', unit:'kg',  price:35,  threshold:2  },
+      { id:'i9',  name:'Eggs',           cat:'Dairy',   unit:'pc',  price:9,   threshold:24 },
+      { id:'i10', name:'Garlic',         cat:'Produce', unit:'kg',  price:120, threshold:1  },
+      { id:'i11', name:'Tamarind Mix',   cat:'Pantry',  unit:'pc',  price:18,  threshold:10 },
+    ],
+    r2: [
+      { id:'i12', name:'Salmon Fillet',  cat:'Seafood', unit:'kg',  price:480, threshold:3  },
+      { id:'i13', name:'Lemon',          cat:'Produce', unit:'pc',  price:12,  threshold:20 },
+      { id:'i14', name:'Butter',         cat:'Dairy',   unit:'g',   price:0.8, threshold:200 },
+    ],
+  },
+
+  // Purchases of ingredients (adds stock)
+  purchases: {
+    r1: [
+      { id:'p1', date:'2024-01-10', iid:'i1',  iname:'Chicken Breast', qty:10, unit:'kg',  price:175, total:1750, supplier:'Farm Fresh Co.', notes:'' },
+      { id:'p2', date:'2024-01-10', iid:'i2',  iname:'Jasmine Rice',   qty:25, unit:'kg',  price:52,  total:1300, supplier:'Rice King',      notes:'' },
+      { id:'p3', date:'2024-01-14', iid:'i1',  iname:'Chicken Breast', qty:8,  unit:'kg',  price:180, total:1440, supplier:'Farm Fresh Co.', notes:'' },
+      { id:'p4', date:'2024-01-14', iid:'i3',  iname:'Cooking Oil',    qty:6,  unit:'L',   price:120, total:720,  supplier:'Pantry Plus',    notes:'' },
+      { id:'p5', date:'2024-01-18', iid:'i4',  iname:'Tomatoes',       qty:12, unit:'kg',  price:68,  total:816,  supplier:'Green Market',   notes:'' },
+      { id:'p6', date:'2024-01-18', iid:'i5',  iname:'Onions',         qty:8,  unit:'kg',  price:40,  total:320,  supplier:'Green Market',   notes:'' },
+      { id:'p7', date:'2024-01-22', iid:'i2',  iname:'Jasmine Rice',   qty:15, unit:'kg',  price:55,  total:825,  supplier:'Rice King',      notes:'' },
+      { id:'p8', date:'2024-01-22', iid:'i6',  iname:'Pork Belly',     qty:5,  unit:'kg',  price:215, total:1075, supplier:'Farm Fresh Co.', notes:'' },
+      { id:'p9', date:'2024-01-22', iid:'i7',  iname:'Kangkong',       qty:3,  unit:'kg',  price:30,  total:90,   supplier:'Green Market',   notes:'' },
+      { id:'p10',date:'2024-01-22', iid:'i8',  iname:'Radish',         qty:2,  unit:'kg',  price:35,  total:70,   supplier:'Green Market',   notes:'' },
+      { id:'p11',date:'2024-01-22', iid:'i9',  iname:'Eggs',           qty:36, unit:'pc',  price:9,   total:324,  supplier:'Farm Fresh Co.', notes:'' },
+      { id:'p12',date:'2024-01-22', iid:'i10', iname:'Garlic',         qty:1,  unit:'kg',  price:120, total:120,  supplier:'Green Market',   notes:'' },
+      { id:'p13',date:'2024-01-22', iid:'i11', iname:'Tamarind Mix',   qty:20, unit:'pc',  price:18,  total:360,  supplier:'Pantry Plus',    notes:'' },
+    ],
+    r2: [
+      { id:'p14',date:'2024-01-12', iid:'i12', iname:'Salmon Fillet', qty:5,   unit:'kg',  price:460, total:2300, supplier:'Ocean Fresh',   notes:'' },
+      { id:'p15',date:'2024-01-20', iid:'i13', iname:'Lemon',         qty:40,  unit:'pc',  price:12,  total:480,  supplier:'Green Market',  notes:'' },
+      { id:'p16',date:'2024-01-20', iid:'i14', iname:'Butter',        qty:500, unit:'g',   price:0.8, total:400,  supplier:'Dairy Fresh',   notes:'' },
+    ],
+  },
+
+  // Menu dishes with ingredient recipe (qty per 1 serving)
+  menu: {
+    r1: [
+      { id:'m1', name:'Sinigang na Baboy',  cat:'Soup',      price:195,
+        recipe:[ {iid:'i6',iname:'Pork Belly',qty:0.25,unit:'kg'},
+                 {iid:'i4',iname:'Tomatoes',  qty:0.08,unit:'kg'},
+                 {iid:'i7',iname:'Kangkong',  qty:0.06,unit:'kg'},
+                 {iid:'i8',iname:'Radish',    qty:0.05,unit:'kg'},
+                 {iid:'i5',iname:'Onions',    qty:0.04,unit:'kg'},
+                 {iid:'i11',iname:'Tamarind Mix',qty:1,unit:'pc'} ] },
+      { id:'m2', name:'Standard Breakfast', cat:'Breakfast', price:120,
+        recipe:[ {iid:'i2',iname:'Jasmine Rice',qty:0.15,unit:'kg'},
+                 {iid:'i9',iname:'Eggs',        qty:2,   unit:'pc'},
+                 {iid:'i3',iname:'Cooking Oil', qty:0.02,unit:'L'},
+                 {iid:'i10',iname:'Garlic',     qty:0.01,unit:'kg'} ] },
+      { id:'m3', name:'Chicken Adobo',       cat:'Main',      price:175,
+        recipe:[ {iid:'i1',iname:'Chicken Breast',qty:0.20,unit:'kg'},
+                 {iid:'i5',iname:'Onions',        qty:0.03,unit:'kg'},
+                 {iid:'i10',iname:'Garlic',       qty:0.01,unit:'kg'},
+                 {iid:'i3',iname:'Cooking Oil',   qty:0.02,unit:'L'},
+                 {iid:'i2',iname:'Jasmine Rice',  qty:0.15,unit:'kg'} ] },
+      { id:'m4', name:'Sinangag',            cat:'Side',      price:55,
+        recipe:[ {iid:'i2',iname:'Jasmine Rice',qty:0.15,unit:'kg'},
+                 {iid:'i10',iname:'Garlic',    qty:0.01,unit:'kg'},
+                 {iid:'i3',iname:'Cooking Oil',qty:0.01,unit:'L'} ] },
+      { id:'m5', name:'Fried Egg',           cat:'Side',      price:35,
+        recipe:[ {iid:'i9',iname:'Eggs',      qty:1,   unit:'pc'},
+                 {iid:'i3',iname:'Cooking Oil',qty:0.01,unit:'L'} ] },
+      { id:'m6', name:'Garlic Rice Bowl',    cat:'Main',      price:130,
+        recipe:[ {iid:'i2',iname:'Jasmine Rice',qty:0.20,unit:'kg'},
+                 {iid:'i10',iname:'Garlic',    qty:0.02,unit:'kg'},
+                 {iid:'i3',iname:'Cooking Oil',qty:0.02,unit:'L'},
+                 {iid:'i9',iname:'Eggs',       qty:1,   unit:'pc'} ] },
+    ],
+    r2: [
+      { id:'m7', name:'Grilled Salmon',  cat:'Main',   price:450,
+        recipe:[ {iid:'i12',iname:'Salmon Fillet',qty:0.25,unit:'kg'},
+                 {iid:'i13',iname:'Lemon',        qty:1,   unit:'pc'},
+                 {iid:'i14',iname:'Butter',       qty:30,  unit:'g'} ] },
+      { id:'m8', name:'Salmon Sashimi', cat:'Starter', price:280,
+        recipe:[ {iid:'i12',iname:'Salmon Fillet',qty:0.12,unit:'kg'},
+                 {iid:'i13',iname:'Lemon',        qty:0.5, unit:'pc'} ] },
+    ],
+  },
+
+  // Completed customer orders (each order deducted ingredients from stock)
+  orders: { r1: [], r2: [] },
+
+  priceHistory: {
+    i1:[ {date:'2024-01-01',price:165,supplier:'Farm Fresh Co.'},{date:'2024-01-14',price:180,supplier:'Farm Fresh Co.'} ],
+    i2:[ {date:'2024-01-01',price:50, supplier:'Rice King'},     {date:'2024-01-22',price:55, supplier:'Rice King'} ],
+  },
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════════════ */
+const uid    = () => 'id' + Date.now() + Math.random().toString(36).slice(2,6);
+const fmt    = n  => '₱' + Number(n).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN   = n  => Number(n).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtDate = d => { try{ return new Date(d+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'}); } catch{ return d; } };
+const today  = () => new Date().toISOString().split('T')[0];
+const rid    = () => S.rid;
+const ingrs  = () => S.ingredients[rid()] || [];
+const purch  = () => S.purchases[rid()]   || [];
+const menuDishes = () => S.menu[rid()]    || [];
+const orders = () => S.orders[rid()]      || [];
+
+/**
+ * Stock level for an ingredient:
+ * = total purchased  −  total used in completed orders (via recipe)
+ */
+function stockOf(iid) {
+  const bought = purch().filter(p => p.iid === iid).reduce((s,p) => s + p.qty, 0);
+  const usedInOrders = orders().reduce((total, order) => {
+    return total + order.items.reduce((t, item) => {
+      const dish = menuDishes().find(m => m.id === item.mid); if (!dish) return t;
+      const r = dish.recipe.find(r => r.iid === iid);
+      return t + (r ? r.qty * item.qty : 0);
+    }, 0);
+  }, 0);
+  return Math.max(0, bought - usedInOrders);
+}
+
+function avgCost(iid) {
+  const ps = purch().filter(p => p.iid === iid);
+  if (!ps.length) return 0;
+  return ps.reduce((s,p) => s+p.total, 0) / ps.reduce((s,p) => s+p.qty, 0);
+}
+
+/**
+ * How many servings of a dish can we make given current stock?
+ */
+function maxServings(dish) {
+  if (!dish.recipe || !dish.recipe.length) return Infinity;
+  let min = Infinity;
+  for (const r of dish.recipe) {
+    const stock = stockOf(r.iid);
+    const possible = r.qty > 0 ? Math.floor(stock / r.qty) : Infinity;
+    min = Math.min(min, possible);
+  }
+  return min === Infinity ? 999 : min;
+}
+
+function getAlerts() {
+  return ingrs().filter(i => i.threshold > 0 && stockOf(i.id) <= i.threshold);
+}
+
+function notif(msg) {
+  const el = document.createElement('div');
+  el.className = 'notif'; el.textContent = msg;
+  document.getElementById('notifWrap').appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NAV
+═══════════════════════════════════════════════════════════════ */
+function go(page) {
+  S.page = page;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const el = document.querySelector(`.nav-item[data-p="${page}"]`);
+  if (el) el.classList.add('active');
+  const titles = {
+    orders:'Take Order', history:'Order History',
+    stock:'Stock Levels', purchases:'Purchases',
+    menu:'Menu & Recipes', items:'Ingredients',
+    stats:'Reports', branches:'Branches',
+  };
+  document.getElementById('pgTitle').textContent = titles[page] || page;
+  updateBadge();
+  render(page);
+}
+
+function switchRest(id) { S.rid = id; S.cart = []; updateBadge(); render(S.page); }
+
+function updateBadge() {
+  const n = getAlerts().length;
+  const b = document.getElementById('alertBadge');
+  b.style.display = n ? 'inline' : 'none';
+  b.textContent = n;
+}
+
+function render(page) {
+  const C = document.getElementById('pgContent');
+  const A = document.getElementById('pgActions');
+  A.innerHTML = '';
+  C.style.padding = page === 'orders' ? '0' : '20px';
+  switch(page) {
+    case 'orders':    renderOrders(C, A);    break;
+    case 'history':   renderHistory(C, A);   break;
+    case 'stock':     renderStock(C, A);     break;
+    case 'purchases': renderPurchases(C, A); break;
+    case 'menu':      renderMenu(C, A);      break;
+    case 'items':     renderItems(C, A);     break;
+    case 'stats':     renderStats(C, A);     break;
+    case 'branches':  renderBranches(C, A);  break;
+  }
+}
+
+function sc(label, val, sub, color) {
+  return `<div class="stat-box">
+    <div class="stat-label">${label}</div>
+    <div class="stat-value" style="color:${color||'var(--text)'}">${val}</div>
+    ${sub?`<div class="stat-sub">${sub}</div>`:''}
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGE: TAKE ORDER
+   The main operational screen. Staff pick dishes, add to cart,
+   place order — ingredients auto-deducted from stock.
+═══════════════════════════════════════════════════════════════ */
+function renderOrders(C, A) {
+  const dishes = menuDishes();
+  const cats = [...new Set(dishes.map(d => d.cat))];
+
+  A.innerHTML = `<button class="btn btn-ghost btn-sm" onclick="go('stock')">📦 Check Stock</button>`;
+
+  C.innerHTML = `
+  <div class="order-grid" style="padding:14px">
+
+    <!-- LEFT: Menu Grid -->
+    <div class="menu-panel">
+      ${cats.map(cat => {
+        const catDishes = dishes.filter(d => d.cat === cat);
+        return `
+        <div class="menu-cat-title">${cat}</div>
+        <div class="dish-cards">
+          ${catDishes.map(dish => {
+            const avail = maxServings(dish);
+            const inCart = S.cart.find(c => c.mid === dish.id);
+            const cartQty = inCart ? inCart.qty : 0;
+            const canAdd = avail > cartQty;
+            const cls = avail === 0 ? 'unavailable' : inCart ? 'in-cart' : '';
+            return `
+            <div class="dish-card ${cls}" onclick="${avail > 0 ? `addToCart('${dish.id}')` : ''}">
+              ${cartQty > 0 ? `<div class="cart-badge">${cartQty}</div>` : ''}
+              <div class="dish-name">${dish.name}</div>
+              <div class="dish-cat">${dish.recipe.length} ingredients</div>
+              <div class="dish-price">${fmt(dish.price)}</div>
+              <div class="dish-avail ${avail === 0 ? 'no' : avail <= 3 ? 'low' : 'ok'}">
+                ${avail === 0 ? '✕ Out of stock' : avail <= 3 ? `⚠ ${avail} left` : `✓ ${avail} available`}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }).join('')}
+      ${!dishes.length ? `<div style="text-align:center;padding:60px 20px;color:var(--text3)"><div style="font-size:30px;margin-bottom:12px">☰</div><div style="font-size:13px;font-weight:600;margin-bottom:6px">No dishes on menu</div><div style="font-size:12px">Go to Menu & Recipes to add dishes</div><button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="go('menu')">Set up menu →</button></div>` : ''}
     </div>
 
-    <nav class="sidebar-nav">
-      <div class="nav-label">Navigation</div>
-      <button class="nav-btn active" id="nav-dashboard" onclick="guardedShowPage('dashboard',this)">
-        <span class="nav-icon">📋</span><span>Dashboard</span>
-      </button>
-      <button class="nav-btn" id="nav-receipts" onclick="guardedShowPage('receipts',this)">
-        <span class="nav-icon">🧾</span><span>Receipts</span>
-      </button>
-      <button class="nav-btn" id="nav-expenses" onclick="guardedShowPage('expenses',this)">
-        <span class="nav-icon">💸</span><span>Expenses</span>
-      </button>
-    </nav>
-
-    <div class="sidebar-bottom">
-      <div class="session-widget">
-        <div class="session-avatar" id="sessionAvatar">?</div>
-        <div class="session-info">
-          <span class="session-user" id="sessionUser"></span>
-          <span class="session-role" id="sessionRole"></span>
+    <!-- RIGHT: Cart / Order Panel -->
+    <div class="cart-panel">
+      <div class="cart-header">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="cart-title">Current Order</div>
+            <div class="cart-sub">${S.cart.length ? S.cart.reduce((s,c)=>s+c.qty,0) + ' item' + (S.cart.reduce((s,c)=>s+c.qty,0)!==1?'s':'') : 'Add dishes from the menu'}</div>
+          </div>
+          ${S.cart.length ? `<button class="btn btn-ghost btn-xs" onclick="clearCart()">Clear</button>` : ''}
         </div>
-        <button class="logout-btn" onclick="logout()" title="Sign out">↩</button>
       </div>
-      <div class="sidebar-footer">
-        <div class="footer-date" id="sidebarDate"></div>
-      </div>
-    </div>
-  </aside>
 
-  <!-- CONTENT -->
-  <div class="content">
-
-    <!-- TOPBAR -->
-    <div class="topbar">
-      <button class="hamburger" onclick="toggleSidebar()">☰</button>
-      <span class="topbar-title" id="pageTitle">Dashboard</span>
-      <div class="topbar-right">
-        <button class="cal-btn" onclick="openCalModal()">
-          <span>📅</span> Calendar
-        </button>
-        <button class="add-btn" onclick="openTxModal()">+ New Transaction</button>
-      </div>
-    </div>
-
-    <!-- MAIN -->
-    <div class="main">
-
-      <!-- ══ DASHBOARD ══ -->
-      <div class="page active" id="page-dashboard">
-
-        <div class="stats-row" id="dashStats"></div>
-
-        <div class="dash-grid">
-          <div class="panel-card">
-            <div class="section-title">
-              Unpaid Transactions
-              <span class="count-badge" id="unpaidCount">0</span>
+      <div class="cart-items">
+        ${S.cart.length ? S.cart.map(item => `
+          <div class="cart-item">
+            <div class="cart-item-name">${item.mname}</div>
+            <div class="qty-ctrl">
+              <button class="qty-btn" onclick="changeQty('${item.mid}',-1)">−</button>
+              <div class="qty-num">${item.qty}</div>
+              <button class="qty-btn" onclick="changeQty('${item.mid}',1)">+</button>
             </div>
-            <div class="table-wrap">
-              <table class="data-table">
-                <thead><tr><th>Customer</th><th>Date</th><th>Amount</th><th></th></tr></thead>
-                <tbody id="unpaidBody"></tbody>
-              </table>
+            <div class="cart-item-price">${fmt(item.price * item.qty)}</div>
+          </div>`).join('') : `
+          <div class="cart-empty">
+            <div class="cart-empty-icon">🧾</div>
+            <div>Tap a dish to add it here</div>
+          </div>`}
+      </div>
+
+      <div class="cart-footer">
+        ${S.cart.length ? `
+          <div style="margin-bottom:10px;background:var(--surface2);border-radius:var(--rs);padding:8px 10px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;font-family:var(--mono)">Ingredients to be used</div>
+            ${getCartIngredientPreview()}
+          </div>
+          <div class="cart-total-row">
+            <div class="cart-total-label">Order Total</div>
+            <div class="cart-total-value">${fmt(S.cart.reduce((s,c) => s + c.price*c.qty, 0))}</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div class="field" style="flex:1">
+              <label>Table / Note</label>
+              <input type="text" id="orderNote" placeholder="e.g. Table 3, Takeout...">
             </div>
           </div>
-
-          <div class="panel-card">
-            <div class="section-title">Recent Transactions</div>
-            <div id="recentList"></div>
+          <button class="btn btn-dark" style="width:100%;margin-top:10px;padding:10px" onclick="placeOrder()">
+            ✓ Place Order & Deduct Stock
+          </button>
+        ` : `
+          <div style="text-align:center;padding:8px 0">
+            <div style="font-size:11px;color:var(--text3)">Select dishes to start an order</div>
           </div>
-        </div>
-
+        `}
       </div>
+    </div>
 
-      <!-- ══ RECEIPTS ══ -->
-      <div class="page" id="page-receipts">
-        <div class="filters-row">
-          <div class="search-wrap">
-            <span class="search-icon">⌕</span>
-            <input class="search-input" id="searchInput" type="text" placeholder="Search customer, staff…" oninput="renderReceipts()">
+  </div>`;
+}
+
+function getCartIngredientPreview() {
+  // Aggregate all ingredients needed for current cart
+  const needed = {};
+  for (const item of S.cart) {
+    const dish = menuDishes().find(m => m.id === item.mid); if (!dish) continue;
+    for (const r of dish.recipe) {
+      const key = r.iid;
+      if (!needed[key]) needed[key] = { iname: r.iname, unit: r.unit, qty: 0, iid: r.iid };
+      needed[key].qty += r.qty * item.qty;
+    }
+  }
+  return Object.values(needed).map(n => {
+    const stock = stockOf(n.iid);
+    const ok = stock >= n.qty;
+    return `<div style="display:flex;justify-content:space-between;font-size:11px;font-family:var(--mono);padding:2px 0;border-bottom:1px solid var(--border)">
+      <span style="font-weight:600;font-family:var(--font)">${n.iname}</span>
+      <span style="color:${ok?'var(--text)':'var(--red)'}">−${fmtN(parseFloat(n.qty.toFixed(3)))} ${n.unit}</span>
+    </div>`;
+  }).join('') || '<div style="font-size:11px;color:var(--text3)">No ingredients tracked</div>';
+}
+
+function addToCart(mid) {
+  const dish = menuDishes().find(m => m.id === mid); if (!dish) return;
+  const existing = S.cart.find(c => c.mid === mid);
+  const curQty = existing ? existing.qty : 0;
+  if (maxServings(dish) <= curQty) { notif(`Not enough stock for another ${dish.name}`); return; }
+  if (existing) { existing.qty++; }
+  else { S.cart.push({ mid, mname: dish.name, price: dish.price, qty: 1 }); }
+  renderOrders(document.getElementById('pgContent'), document.getElementById('pgActions'));
+}
+
+function changeQty(mid, delta) {
+  const idx = S.cart.findIndex(c => c.mid === mid); if (idx === -1) return;
+  if (delta === 1) {
+    const dish = menuDishes().find(m => m.id === mid);
+    if (maxServings(dish) <= S.cart[idx].qty) { notif('Not enough stock'); return; }
+  }
+  S.cart[idx].qty += delta;
+  if (S.cart[idx].qty <= 0) S.cart.splice(idx, 1);
+  renderOrders(document.getElementById('pgContent'), document.getElementById('pgActions'));
+}
+
+function clearCart() {
+  S.cart = [];
+  renderOrders(document.getElementById('pgContent'), document.getElementById('pgActions'));
+}
+
+function placeOrder() {
+  if (!S.cart.length) { notif('Cart is empty'); return; }
+  // Final stock check
+  const needed = {};
+  for (const item of S.cart) {
+    const dish = menuDishes().find(m => m.id === item.mid); if (!dish) continue;
+    for (const r of dish.recipe) {
+      if (!needed[r.iid]) needed[r.iid] = { iname: r.iname, unit: r.unit, qty: 0 };
+      needed[r.iid].qty += r.qty * item.qty;
+    }
+  }
+  for (const [iid, n] of Object.entries(needed)) {
+    const stock = stockOf(iid);
+    if (stock < n.qty) {
+      notif(`❌ Not enough ${n.iname} — need ${n.qty.toFixed(2)} ${n.unit}, have ${stock.toFixed(2)}`);
+      return;
+    }
+  }
+  const note = document.getElementById('orderNote')?.value || '';
+  const total = S.cart.reduce((s, c) => s + c.price * c.qty, 0);
+  const order = {
+    id:    uid(),
+    num:   (orders().length + 1),
+    date:  today(),
+    time:  new Date().toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' }),
+    items: S.cart.map(c => ({ mid: c.mid, mname: c.mname, price: c.price, qty: c.qty })),
+    total,
+    note,
+  };
+  const r = rid();
+  if (!S.orders[r]) S.orders[r] = [];
+  S.orders[r].push(order);
+  S.cart = [];
+  updateBadge();
+  notif(`✓ Order #${order.num} placed — stock deducted`);
+  renderOrders(document.getElementById('pgContent'), document.getElementById('pgActions'));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGE: ORDER HISTORY
+═══════════════════════════════════════════════════════════════ */
+function renderHistory(C, A) {
+  const ords = [...orders()].sort((a,b) => b.num - a.num);
+  const totalRev = ords.reduce((s,o) => s + o.total, 0);
+  A.innerHTML = `<button class="btn btn-light btn-sm" onclick="exportFull()">↓ Export</button>`;
+  C.innerHTML = `
+    <div class="stat-grid sg4" style="margin-bottom:16px">
+      ${sc('Total Orders',   ords.length,     '')}
+      ${sc('Total Revenue',  fmt(totalRev),   'All orders', 'var(--green)')}
+      ${sc('Avg Order Size', ords.length ? fmt(totalRev/ords.length) : '—', '')}
+      ${sc('Today\'s Orders',ords.filter(o=>o.date===today()).length, today())}
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div class="sec-title">Order History</div>
+        <div class="search-wrap"><span class="s-ic">⌕</span><input type="text" placeholder="Search..." oninput="filterTable(this,'ordTbl')" style="font-size:12px"></div>
+      </div>
+      <div style="overflow-x:auto"><table id="ordTbl">
+        <thead><tr><th>#</th><th>Date & Time</th><th>Items</th><th>Note</th><th>Total</th><th></th></tr></thead>
+        <tbody>
+          ${ords.length ? ords.map(o => `
+            <tr data-search="${o.note.toLowerCase()} ${o.items.map(i=>i.mname).join(' ').toLowerCase()}">
+              <td class="mono" style="font-weight:700;color:var(--text3)">#${o.num}</td>
+              <td class="mono" style="color:var(--text3);font-size:11px">${fmtDate(o.date)} ${o.time}</td>
+              <td>${o.items.map(i => `${i.qty}× ${i.mname}`).join(', ')}</td>
+              <td style="color:var(--text3)">${o.note||'—'}</td>
+              <td class="mono" style="font-weight:700;color:var(--green)">${fmt(o.total)}</td>
+              <td>
+                <button class="btn btn-ghost btn-xs" onclick="viewOrder('${o.id}')">View</button>
+                <button class="btn btn-red btn-xs" style="margin-left:4px" onclick="voidOrder('${o.id}')">Void</button>
+              </td>
+            </tr>`).join('')
+          : '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:40px;font-weight:500">No orders yet. Take orders from the Take Order page.</td></tr>'}
+        </tbody>
+      </table></div>
+    </div>`;
+}
+
+function viewOrder(oid) {
+  const o = orders().find(x => x.id === oid); if (!o) return;
+  showModal(`Order #${o.num}`, `
+    <div class="ticket">
+      <div style="text-align:center;font-weight:700;font-size:14px;margin-bottom:4px">${S.restaurants[rid()].name}</div>
+      <div style="text-align:center;font-size:11px;color:var(--text3)">${fmtDate(o.date)} · ${o.time}</div>
+      ${o.note ? `<div style="text-align:center;font-size:11px">${o.note}</div>` : ''}
+      <hr>
+      ${o.items.map(i => `<div style="display:flex;justify-content:space-between"><span>${i.qty}× ${i.mname}</span><span>${fmt(i.price*i.qty)}</span></div>`).join('')}
+      <hr>
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px"><span>TOTAL</span><span>${fmt(o.total)}</span></div>
+    </div>
+    <div style="margin-top:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;font-family:var(--mono)">Ingredients deducted by this order</div>
+      ${getOrderIngredientLog(o)}
+    </div>
+  `, null, 'Close');
+}
+
+function getOrderIngredientLog(order) {
+  const used = {};
+  for (const item of order.items) {
+    const dish = menuDishes().find(m => m.id === item.mid); if (!dish) continue;
+    for (const r of dish.recipe) {
+      if (!used[r.iid]) used[r.iid] = { iname: r.iname, unit: r.unit, qty: 0 };
+      used[r.iid].qty += r.qty * item.qty;
+    }
+  }
+  return Object.values(used).map(u =>
+    `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)">
+      <span style="font-weight:600">${u.iname}</span>
+      <span class="mono" style="color:var(--amber)">−${fmtN(parseFloat(u.qty.toFixed(3)))} ${u.unit}</span>
+    </div>`
+  ).join('') || '<div style="font-size:12px;color:var(--text3)">No ingredient data</div>';
+}
+
+function voidOrder(oid) {
+  if (!confirm('Void this order? Stock will be returned.')) return;
+  S.orders[rid()] = S.orders[rid()].filter(o => o.id !== oid);
+  updateBadge();
+  renderHistory(document.getElementById('pgContent'), document.getElementById('pgActions'));
+  notif('Order voided — stock restored');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGE: STOCK LEVELS
+═══════════════════════════════════════════════════════════════ */
+function renderStock(C, A) {
+  const it = ingrs(), alerts = getAlerts();
+  A.innerHTML = `<button class="btn btn-light btn-sm" onclick="exportToExcel('stock')">↓ Export</button>`;
+
+  const rows = it.map(item => {
+    const stock = stockOf(item.id), ac = avgCost(item.id);
+    const totalBought = purch().filter(p => p.iid === item.id).reduce((s,p) => s+p.qty, 0);
+    const usedInOrders = orders().reduce((total, o) => {
+      return total + o.items.reduce((t, item2) => {
+        const dish = menuDishes().find(m => m.id === item2.mid); if (!dish) return t;
+        const r = dish.recipe.find(r => r.iid === item.id);
+        return t + (r ? r.qty * item2.qty : 0);
+      }, 0);
+    }, 0);
+    const isCrit = item.threshold > 0 && stock <= item.threshold * 0.5;
+    const isLow  = item.threshold > 0 && stock <= item.threshold;
+    const pct    = totalBought > 0 ? Math.min(100, (stock / totalBought) * 100) : 0;
+    const usedInMenu = menuDishes().filter(d => d.recipe.some(r => r.iid === item.id)).length;
+    return { item, stock, ac, totalBought, usedInOrders, isLow, isCrit, pct,
+      bc: isCrit?'#991B1B':isLow?'#92400E':'#166534',
+      sc: isCrit?'bg-red':isLow?'bg-amber':'bg-green',
+      sl: isCrit?'Critical':isLow?'Low':'OK', usedInMenu };
+  }).sort((a,b) => ((b.isLow||b.isCrit)?1:0) - ((a.isLow||a.isCrit)?1:0));
+
+  C.innerHTML = `
+    ${alerts.length ? `<div class="alert-strip">⚠ <strong>${alerts.length} ingredient${alerts.length>1?'s':''}</strong> below restock threshold</div>` : ''}
+    <div class="stat-grid sg4" style="margin-bottom:16px">
+      ${sc('Ingredients', it.length, '')}
+      ${sc('Stock Value', fmt(rows.reduce((s,r)=>s+r.stock*r.ac,0)), 'at avg. cost')}
+      ${sc('Low Stock', alerts.length, '', alerts.length?'var(--amber)':'var(--green)')}
+      ${sc('Critical', rows.filter(r=>r.isCrit).length, '', 'var(--red)')}
+    </div>
+
+    <!-- Ingredient tracker — shows purchased, used in orders, remaining -->
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div><div class="sec-title">Ingredient Tracker</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Stock = Purchased − Used in Orders</div></div>
+        <div class="search-wrap"><span class="s-ic">⌕</span><input type="text" placeholder="Search..." oninput="filterIngr(this)" style="font-size:12px"></div>
+      </div>
+      <div id="ingrList">
+        ${rows.map(r => `
+          <div class="ingr-item" data-search="${r.item.name.toLowerCase()} ${r.item.cat.toLowerCase()}">
+            <div class="ingr-header">
+              <div>
+                <span class="ingr-name">${r.item.name}</span>
+                <span class="pill" style="margin-left:6px">${r.item.cat}</span>
+                ${r.usedInMenu ? `<span style="font-size:10px;color:var(--blue);font-weight:600;margin-left:6px;background:var(--blue-bg);padding:1px 6px;border-radius:10px;font-family:var(--mono)">in ${r.usedInMenu} dish${r.usedInMenu>1?'es':''}</span>` : ''}
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="ingr-qty" style="color:${r.isCrit?'var(--red)':r.isLow?'var(--amber)':'var(--text)'}">${fmtN(r.stock)} ${r.item.unit}</span>
+                <span class="badge ${r.sc}">${r.sl}</span>
+              </div>
+            </div>
+            <div class="prog-wrap" style="margin-bottom:5px"><div class="prog-bar" style="width:${r.pct}%;background:${r.bc}"></div></div>
+            <div class="ingr-breakdown">
+              <span>Purchased: <strong>${fmtN(r.totalBought)}</strong></span>
+              ${r.usedInOrders ? `<span style="color:var(--amber)">Used in orders: <strong>−${fmtN(parseFloat(r.usedInOrders.toFixed(3)))}</strong></span>` : ''}
+              <span>Remaining: <strong style="color:${r.isCrit?'var(--red)':r.isLow?'var(--amber)':'var(--green)'}">${fmtN(r.stock)}</strong></span>
+              <span>Threshold: <strong>${r.item.threshold||'—'}</strong></span>
+              ${r.ac ? `<span>Avg cost: <strong>${fmt(r.ac)}</strong></span>` : ''}
+            </div>
+          </div>`).join('') || `<div style="padding:40px;text-align:center;color:var(--text3)">No ingredients. Add them in the Ingredients page.</div>`}
+      </div>
+    </div>`;
+}
+
+function filterIngr(input) {
+  const q = input.value.toLowerCase();
+  document.querySelectorAll('#ingrList .ingr-item').forEach(el => {
+    el.style.display = (el.dataset.search || el.textContent.toLowerCase()).includes(q) ? '' : 'none';
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGE: PURCHASES (restock ingredients)
+═══════════════════════════════════════════════════════════════ */
+function renderPurchases(C, A) {
+  const ps = [...purch()].sort((a,b) => new Date(b.date)-new Date(a.date));
+  A.innerHTML = `<button class="btn btn-dark btn-sm" onclick="openAddPurchase()">+ Record Purchase</button><button class="btn btn-light btn-sm" onclick="exportToExcel('purchases')">↓ Export</button>`;
+  C.innerHTML = `
+    <div class="stat-grid sg4" style="margin-bottom:16px">
+      ${sc('Total Spent', fmt(ps.reduce((s,p)=>s+p.total,0)), '')}
+      ${sc('Transactions', ps.length, '')}
+      ${sc('Avg Purchase', ps.length?fmt(ps.reduce((s,p)=>s+p.total,0)/ps.length):'—', '')}
+      ${sc('This Month', fmt(ps.filter(p=>p.date.slice(0,7)===today().slice(0,7)).reduce((s,p)=>s+p.total,0)), today().slice(0,7))}
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div class="sec-title">Purchase Log</div>
+        <div class="search-wrap"><span class="s-ic">⌕</span><input type="text" placeholder="Search..." oninput="filterTable(this,'pTbl')" style="font-size:12px"></div>
+      </div>
+      <div style="overflow-x:auto"><table id="pTbl">
+        <thead><tr><th>Date</th><th>Ingredient</th><th>Qty</th><th>Unit</th><th>Price/Unit</th><th>Total</th><th>Supplier</th><th>Notes</th><th></th></tr></thead>
+        <tbody>
+          ${ps.length ? ps.map(p => `
+            <tr data-search="${p.iname.toLowerCase()} ${(p.supplier||'').toLowerCase()}">
+              <td class="mono" style="color:var(--text3);font-size:11px">${fmtDate(p.date)}</td>
+              <td style="font-weight:600">${p.iname}</td>
+              <td class="mono" style="font-weight:700">${p.qty}</td>
+              <td style="color:var(--text2)">${p.unit}</td>
+              <td class="mono">${fmt(p.price)}</td>
+              <td class="mono" style="font-weight:700">${fmt(p.total)}</td>
+              <td style="color:var(--text2)">${p.supplier||'—'}</td>
+              <td style="color:var(--text2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.notes||'—'}</td>
+              <td><button class="btn btn-red btn-xs" onclick="delPurchase('${p.id}')">✕</button></td>
+            </tr>`).join('')
+          : '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:40px;font-weight:500">No purchases yet. Click "+ Record Purchase" to restock ingredients.</td></tr>'}
+        </tbody>
+      </table></div>
+    </div>`;
+}
+
+function openAddPurchase() {
+  const opts = ingrs().map(i => `<option value="${i.id}" data-unit="${i.unit}" data-price="${i.price}">${i.name} (${i.unit})</option>`).join('');
+  showModal('Record Purchase', `
+    <div class="fg2" style="margin-bottom:10px">
+      <div class="field"><label>Date *</label><input type="date" id="pp_date" value="${today()}"></div>
+      <div class="field"><label>Ingredient *</label><select id="pp_item" onchange="ppFill(this)"><option value="">— Select —</option>${opts}</select></div>
+    </div>
+    <div class="fg3" style="margin-bottom:10px">
+      <div class="field"><label>Quantity *</label><input type="number" id="pp_qty" placeholder="0" min="0" step="0.01" oninput="ppCalc()"></div>
+      <div class="field"><label>Unit</label><input type="text" id="pp_unit" class="ro" readonly></div>
+      <div class="field"><label>Price / Unit (₱) *</label><input type="number" id="pp_price" placeholder="0.00" min="0" step="0.01" oninput="ppCalc()"></div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;display:flex;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:12px;font-weight:600;color:var(--text2)">Total Cost</span>
+      <span id="pp_total" class="mono" style="font-size:18px;font-weight:700">₱0.00</span>
+    </div>
+    <div class="fg2">
+      <div class="field"><label>Supplier</label><input type="text" id="pp_supplier" placeholder="Supplier name"></div>
+      <div class="field"><label>Notes</label><input type="text" id="pp_notes" placeholder="Optional"></div>
+    </div>
+    <div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--rs);padding:8px 10px;font-size:11px;color:var(--amber);font-weight:500;margin-top:10px">
+      ⚠ If purchase price differs from the catalog price, it will be auto-logged to price history.
+    </div>
+  `, () => savePurchase());
+}
+function ppFill(sel) { const o=sel.options[sel.selectedIndex];if(o.value){document.getElementById('pp_unit').value=o.dataset.unit;document.getElementById('pp_price').value=o.dataset.price;ppCalc();} }
+function ppCalc()    { const q=parseFloat(document.getElementById('pp_qty')?.value||0),p=parseFloat(document.getElementById('pp_price')?.value||0),el=document.getElementById('pp_total');if(el)el.textContent=fmt(q*p); }
+function savePurchase() {
+  const sel=document.getElementById('pp_item'),iid=sel.value,iname=sel.options[sel.selectedIndex]?.text?.split(' (')[0];
+  const qty=parseFloat(document.getElementById('pp_qty').value),price=parseFloat(document.getElementById('pp_price').value);
+  const unit=document.getElementById('pp_unit').value,date=document.getElementById('pp_date').value;
+  const supplier=document.getElementById('pp_supplier').value,notes=document.getElementById('pp_notes').value;
+  if(!iid||!qty||!price||!date){notif('Fill in all required fields');return}
+  const r=rid();if(!S.purchases[r])S.purchases[r]=[];
+  S.purchases[r].push({id:uid(),date,iid,iname,qty,unit,price,total:qty*price,supplier,notes});
+  const item=ingrs().find(i=>i.id===iid);
+  if(item&&item.price!==price){item.price=price;if(!S.priceHistory[iid])S.priceHistory[iid]=[];S.priceHistory[iid].push({date,price,supplier:supplier||'Unknown'});}
+  closeModal();notif(`Purchased ${qty} ${unit} of ${iname}`);updateBadge();
+  renderPurchases(document.getElementById('pgContent'),document.getElementById('pgActions'));
+}
+function delPurchase(id){if(!confirm('Delete this purchase?'))return;S.purchases[rid()]=S.purchases[rid()].filter(p=>p.id!==id);updateBadge();renderPurchases(document.getElementById('pgContent'),document.getElementById('pgActions'));notif('Deleted');}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGE: MENU & RECIPES
+═══════════════════════════════════════════════════════════════ */
+function renderMenu(C, A) {
+  const dishes = menuDishes();
+  A.innerHTML = `<button class="btn btn-dark btn-sm" onclick="openAddDish()">+ Add Dish</button>`;
+  C.innerHTML = `
+    <div class="stat-grid sg4" style="margin-bottom:16px">
+      ${sc('Dishes', dishes.length, '')}
+      ${sc('Available Now', dishes.filter(d=>maxServings(d)>0).length, 'in stock', 'var(--green)')}
+      ${sc('Out of Stock', dishes.filter(d=>maxServings(d)===0).length, '', 'var(--red)')}
+      ${sc('Total Orders', orders().length, 'All time')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+      ${dishes.map(dish => {
+        const avail = maxServings(dish);
+        const timesOrdered = orders().reduce((s,o) => s + o.items.filter(i=>i.mid===dish.id).reduce((s2,i)=>s2+i.qty,0), 0);
+        const ingCost = dish.recipe.reduce((s,r) => s + avgCost(r.iid)*r.qty, 0);
+        return `
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div>
+              <div style="font-size:14px;font-weight:700">${dish.name}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:1px;font-family:var(--mono)">${dish.cat} · ordered ${timesOrdered}×</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:16px;font-weight:700;font-family:var(--mono)">${fmt(dish.price)}</div>
+              <div class="badge ${avail===0?'bg-red':avail<=3?'bg-amber':'bg-green'}" style="margin-top:4px">${avail===0?'Out of stock':avail<=3?`${avail} servings left`:`${avail} available`}</div>
+            </div>
           </div>
-          <select class="filter-select" id="filterPaid" onchange="renderReceipts()">
-            <option value="">All status</option>
-            <option value="0">Unpaid</option>
-            <option value="1">Paid</option>
-          </select>
-          <select class="filter-select" id="filterMonth" onchange="renderReceipts()">
-            <option value="">All months</option>
-          </select>
-        </div>
-        <div class="table-card">
-          <table class="data-table">
-            <thead>
-              <tr><th>#</th><th>Date</th><th>Customer</th><th>Staff</th><th>Loads</th><th>Total</th><th>Paid</th><th>Status</th><th></th></tr>
-            </thead>
-            <tbody id="receiptsBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ══ EXPENSES ══ -->
-      <div class="page" id="page-expenses">
-        <div class="panel-card" style="margin-bottom:14px;">
-          <div class="section-title">Add Expense</div>
-          <div class="exp-form">
-            <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="eDate"></div>
-            <div class="form-group"><label class="form-label">Description</label><input class="form-input" type="text" id="eName" placeholder="e.g. Gas, Machine Repair"></div>
-            <div class="form-group"><label class="form-label">Qty</label><input class="form-input" type="number" id="eQty" value="1" min="1"></div>
-            <div class="form-group"><label class="form-label">Amount (₱)</label><input class="form-input" type="number" id="eAmount" placeholder="0"></div>
-            <button class="btn btn-primary" style="align-self:flex-end;white-space:nowrap;" onclick="addExpense()">Add</button>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;font-family:var(--mono)">Recipe (per serving)</div>
+          ${dish.recipe.map(r => {
+            const stock = stockOf(r.iid);
+            const ok = stock >= r.qty;
+            return `<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)">
+              <span>${r.iname}</span>
+              <span class="mono" style="color:${ok?'var(--text2)':'var(--red)'};font-weight:600">${r.qty} ${r.unit} <span style="color:var(--text3)">(${fmtN(stock)} left)</span></span>
+            </div>`;
+          }).join('')}
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;color:var(--text3)">Est. cost: <span class="mono" style="font-weight:700;color:var(--text)">${fmt(ingCost)}</span> · margin: <span class="mono" style="font-weight:700;color:var(--green)">${fmt(dish.price-ingCost)}</span></div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost btn-xs" onclick="openEditDish('${dish.id}')">Edit</button>
+              <button class="btn btn-red btn-xs" onclick="deleteDish('${dish.id}')">✕</button>
+            </div>
           </div>
-        </div>
-        <div class="table-card">
-          <table class="data-table">
-            <thead><tr><th>Date</th><th>Description</th><th>Qty</th><th>Total</th><th></th></tr></thead>
-            <tbody id="expensesBody"></tbody>
-          </table>
-        </div>
-      </div>
+        </div>`;
+      }).join('') || `<div class="card" style="text-align:center;padding:60px;color:var(--text3);grid-column:1/-1"><div style="font-size:30px;margin-bottom:12px">☰</div><div style="font-weight:600;font-size:13px;margin-bottom:6px">No dishes yet</div><div style="font-size:12px;margin-bottom:16px">Add dishes and assign their ingredient recipes</div><button class="btn btn-ghost btn-sm" onclick="openAddDish()">+ Add First Dish</button></div>`}
+    </div>`;
+}
 
-    </div><!-- /main -->
-  </div><!-- /content -->
-</div><!-- /appShell -->
-
-
-<!-- ══ MODAL: NEW TRANSACTION ══ -->
-<div class="overlay" id="txOverlay" onclick="handleTxOverlayClick(event)">
-  <div class="modal" id="txModal">
-    <div class="modal-head">
-      <div>
-        <div class="modal-title">New Transaction</div>
-        <div class="modal-sub" id="txModalSub"></div>
-      </div>
-      <button class="modal-close" onclick="closeTxModal()">✕</button>
+let _irc = 0;
+function openAddDish(eid) {
+  _irc = 0;
+  const existing = eid ? menuDishes().find(m => m.id === eid) : null;
+  showModal(eid ? 'Edit Dish' : 'Add Menu Dish', `
+    <div class="fg2" style="margin-bottom:10px">
+      <div class="field"><label>Dish Name *</label><input type="text" id="fd_name" value="${existing?.name||''}" placeholder="e.g. Sinigang na Baboy"></div>
+      <div class="field"><label>Category</label><input type="text" id="fd_cat" value="${existing?.cat||''}" placeholder="e.g. Soup, Main, Breakfast"></div>
     </div>
-    <div class="modal-body">
-
-      <div class="form-section-label">Transaction Info</div>
-      <div class="form-grid-3">
-        <div class="form-group">
-          <label class="form-label">Date</label>
-          <input class="form-input" type="date" id="tDate" onchange="updateWeekday()">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Weekday</label>
-          <input class="form-input" type="text" id="tWeekday" readonly>
-        </div>
-        <div class="form-group">
-          <label class="form-label">In Charge</label>
-          <select class="form-select" id="tIncharge">
-            <option value="">— Staff —</option>
-            <option>Weng</option>
-            <option>Celia</option>
-            <option>Cecil</option>
-            <option>Tikong</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-divider"></div>
-      <div class="form-section-label">Customer Details</div>
-
-      <div class="form-group" style="margin-bottom:12px;">
-        <label class="form-label">Customer Name</label>
-        <input class="form-input" type="text" id="tCustomer" placeholder="Enter name">
-      </div>
-      <div class="form-grid" style="margin-bottom:12px;">
-        <div class="form-group">
-          <label class="form-label">Weight (kg)</label>
-          <input class="form-input" type="number" id="tWeight" step="0.1" min="0" placeholder="0.0">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Machine Used</label>
-          <input class="form-input" type="text" id="tMachine" placeholder="e.g. 1, 2, 3">
-        </div>
-      </div>
-      <div class="form-grid-3" style="margin-bottom:12px;">
-        <div class="form-group">
-          <label class="form-label">No. of Loads</label>
-          <input class="form-input" type="number" id="tLoads" min="1" value="1" oninput="calcPrice()">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Rush?</label>
-          <select class="form-select" id="tRush" onchange="calcPrice()">
-            <option value="0">No</option>
-            <option value="1">Yes (+₱50)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Extra / load?</label>
-          <select class="form-select" id="tPload" onchange="calcPrice()">
-            <option value="0">No</option>
-            <option value="1">Yes (+₱20)</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-grid" style="margin-bottom:12px;">
-        <div class="form-group">
-          <label class="form-label">Half price?</label>
-          <select class="form-select" id="tHalf" onchange="calcPrice()">
-            <option value="0">No</option>
-            <option value="1">Yes (50% off)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Notes / Discount</label>
-          <input class="form-input" type="text" id="tNotes" placeholder="Optional">
-        </div>
-      </div>
-
-      <div class="price-bar">
-        <div>
-          <div class="price-bar-label">Computed Total</div>
-          <div class="price-bar-breakdown" id="priceBreakdown">—</div>
-        </div>
-        <div class="price-bar-value" id="priceDisplay">₱0</div>
-      </div>
-
-      <div class="form-grid" style="margin-top:14px;">
-        <div class="form-group">
-          <label class="form-label">Payment Received (₱)</label>
-          <input class="form-input" type="number" id="tPay" placeholder="0" min="0">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Payment Status</label>
-          <select class="form-select" id="tPaid">
-            <option value="0">Unpaid</option>
-            <option value="1">Paid</option>
-          </select>
-        </div>
-      </div>
-
+    <div class="fg2" style="margin-bottom:10px">
+      <div class="field"><label>Selling Price (₱) *</label><input type="number" id="fd_price" value="${existing?.price||''}" placeholder="0.00" min="0" step="0.01"></div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="resetTxForm()">Clear</button>
-      <button class="btn btn-primary" onclick="addTransaction()">Save Transaction</button>
-    </div>
-  </div>
-</div>
+    <div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;font-family:var(--mono)">Recipe — Ingredients per serving</div>
+    <div id="fd_ingr" style="margin-bottom:8px"></div>
+    <button class="btn btn-ghost btn-sm" onclick="addIngrRow()">+ Add Ingredient</button>
+  `, () => saveDish(eid));
+  setTimeout(() => {
+    if (existing) { existing.recipe.forEach(r => { addIngrRow(); const rows=document.querySelectorAll('#fd_ingr div[id^="ir_"]');const row=rows[rows.length-1];row.querySelector('select').value=r.iid;row.querySelector('input').value=r.qty;row.querySelector('.uh').textContent=r.unit; }); }
+    else { addIngrRow(); addIngrRow(); }
+  }, 30);
+}
+function addIngrRow() {
+  _irc++; const n = _irc;
+  const opts = ingrs().map(i => `<option value="${i.id}" data-unit="${i.unit}">${i.name} (${i.unit})</option>`).join('');
+  const row = document.createElement('div'); row.id = 'ir_' + n;
+  row.style.cssText = 'display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)';
+  row.innerHTML = `<select style="flex:2;border:1px solid var(--border2);border-radius:var(--rs);padding:5px 8px;font-family:var(--font);font-size:12px;background:var(--surface);color:var(--text);outline:none" onchange="this.parentElement.querySelector('.uh').textContent=this.options[this.selectedIndex].dataset.unit||''"><option value="">— Select ingredient —</option>${opts}</select><input type="number" placeholder="Qty" step="0.001" min="0" style="width:68px;border:1px solid var(--border2);border-radius:var(--rs);padding:5px 7px;font-family:var(--mono);font-size:12px;font-weight:600;background:var(--surface);color:var(--text);outline:none"><span class="uh" style="font-size:11px;color:var(--text3);font-weight:600;min-width:22px;font-family:var(--mono)"></span><button onclick="document.getElementById('ir_${n}').remove()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:15px;padding:0 2px">×</button>`;
+  document.getElementById('fd_ingr').appendChild(row);
+}
+function saveDish(eid) {
+  const name=document.getElementById('fd_name')?.value.trim(), cat=document.getElementById('fd_cat')?.value.trim()||'Main';
+  const price=parseFloat(document.getElementById('fd_price')?.value);
+  if(!name||!price){notif('Fill in dish name and price');return}
+  const recipe=[];
+  for(const row of document.querySelectorAll('#fd_ingr div[id^="ir_"]')){const sel=row.querySelector('select'),qEl=row.querySelector('input[type="number"]'),iid=sel?.value,qty=parseFloat(qEl?.value||0);if(!iid||!qty)continue;const item=ingrs().find(i=>i.id===iid);if(item)recipe.push({iid,iname:item.name,qty,unit:item.unit});}
+  const r=rid();if(!S.menu[r])S.menu[r]=[];
+  if(eid){const idx=S.menu[r].findIndex(m=>m.id===eid);S.menu[r][idx]={...S.menu[r][idx],name,cat,price,recipe};}
+  else S.menu[r].push({id:uid(),name,cat,price,recipe});
+  closeModal();notif(eid?'Dish updated':'Dish added to menu');
+  renderMenu(document.getElementById('pgContent'),document.getElementById('pgActions'));
+}
+function openEditDish(mid){openAddDish(mid);}
+function deleteDish(mid){if(!confirm('Remove this dish?'))return;S.menu[rid()]=S.menu[rid()].filter(m=>m.id!==mid);renderMenu(document.getElementById('pgContent'),document.getElementById('pgActions'));notif('Removed');}
 
-
-<!-- ══ MODAL: CALENDAR ══ -->
-<div class="overlay" id="calOverlay" onclick="handleCalOverlayClick(event)">
-  <div class="modal modal-wide" id="calModal">
-    <div class="modal-head">
-      <div class="cal-modal-head-left">
-        <button class="cal-nav-btn" onclick="changeMonth(-1)">←</button>
-        <div class="modal-title" id="calTitle"></div>
-        <button class="cal-nav-btn" onclick="changeMonth(1)">→</button>
-        <button class="today-btn" onclick="goToToday()">Today</button>
+/* ═══════════════════════════════════════════════════════════════
+   PAGE: INGREDIENTS CATALOG
+═══════════════════════════════════════════════════════════════ */
+function renderItems(C, A) {
+  const it = ingrs();
+  A.innerHTML = `<button class="btn btn-dark btn-sm" onclick="openAddIngr()">+ Add Ingredient</button><button class="btn btn-light btn-sm" onclick="exportToExcel('items')">↓ Export</button>`;
+  C.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div><div class="sec-title">Ingredient Catalog</div><div style="font-size:11px;color:var(--text3);margin-top:1px">${it.length} ingredients</div></div>
+        <div class="search-wrap"><span class="s-ic">⌕</span><input type="text" placeholder="Search..." oninput="filterTable(this,'iTbl')" style="font-size:12px"></div>
       </div>
-      <button class="modal-close" onclick="closeCalModal()">✕</button>
+      <div style="overflow-x:auto"><table id="iTbl">
+        <thead><tr><th>Name</th><th>Category</th><th>Unit</th><th>Catalog Price</th><th>Avg Cost</th><th>In Stock</th><th>Used In</th><th>Threshold</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${it.map(item => {
+            const ac = avgCost(item.id), stock = stockOf(item.id);
+            const dc = menuDishes().filter(d => d.recipe.some(r => r.iid === item.id)).length;
+            const isLow = item.threshold > 0 && stock <= item.threshold;
+            return `
+            <tr data-search="${item.name.toLowerCase()} ${item.cat.toLowerCase()}">
+              <td style="font-weight:700">${item.name}</td>
+              <td><span class="pill">${item.cat}</span></td>
+              <td class="mono" style="color:var(--text2)">${item.unit}</td>
+              <td class="mono" style="font-weight:700">${fmt(item.price)}</td>
+              <td class="mono" style="color:var(--text2)">${ac?fmt(ac):'—'}</td>
+              <td class="mono" style="font-weight:700;color:${isLow?'var(--red)':'var(--text)'}">${fmtN(stock)} ${item.unit}</td>
+              <td>${dc?`<span class="badge bg-blue">${dc} dish${dc>1?'es':''}</span>`:'<span style="color:var(--text3);font-size:11px">—</span>'}</td>
+              <td class="mono" style="color:var(--text2)">${item.threshold||'—'}</td>
+              <td style="display:flex;gap:4px">
+                <button class="btn btn-ghost btn-xs" onclick="openEditIngr('${item.id}')">Edit</button>
+                <button class="btn btn-red btn-xs" onclick="deleteIngr('${item.id}')">✕</button>
+              </td>
+            </tr>`;
+          }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:40px">No ingredients. Click "+ Add Ingredient".</td></tr>'}
+        </tbody>
+      </table></div>
+    </div>`;
+}
+const CATS = ['Meat','Seafood','Produce','Grains','Dairy','Pantry','Beverages','Other'];
+function openAddIngr(eid) {
+  const ex = eid ? ingrs().find(i=>i.id===eid) : null;
+  showModal(eid?'Edit Ingredient':'Add Ingredient', `
+    <div class="fg2" style="margin-bottom:10px">
+      <div class="field"><label>Name *</label><input type="text" id="fi_name" value="${ex?.name||''}" placeholder="e.g. Chicken Breast"></div>
+      <div class="field"><label>Category *</label><select id="fi_cat">${CATS.map(c=>`<option ${ex?.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
     </div>
+    <div class="fg3">
+      <div class="field"><label>Unit *</label><input type="text" id="fi_unit" value="${ex?.unit||''}" placeholder="kg, L, pc..."></div>
+      <div class="field"><label>Current Price (₱) *</label><input type="number" id="fi_price" value="${ex?.price||''}" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="field"><label>Low Stock Threshold</label><input type="number" id="fi_thresh" value="${ex?.threshold||''}" placeholder="e.g. 5" min="0"></div>
+    </div>
+  `, () => saveIngr(eid));
+}
+function saveIngr(eid) {
+  const name=document.getElementById('fi_name').value.trim(), cat=document.getElementById('fi_cat').value;
+  const unit=document.getElementById('fi_unit').value.trim(), price=parseFloat(document.getElementById('fi_price').value);
+  const threshold=parseFloat(document.getElementById('fi_thresh').value)||0;
+  if(!name||!cat||!unit||!price){notif('Fill in all required fields');return}
+  const r=rid();if(!S.ingredients[r])S.ingredients[r]=[];
+  if(eid){const idx=S.ingredients[r].findIndex(i=>i.id===eid);const old=S.ingredients[r][idx].price;S.ingredients[r][idx]={...S.ingredients[r][idx],name,cat,unit,price,threshold};if(old!==price){if(!S.priceHistory[eid])S.priceHistory[eid]=[];S.priceHistory[eid].push({date:today(),price,supplier:'Manual update'});}}
+  else{const id=uid();S.ingredients[r].push({id,name,cat,unit,price,threshold});S.priceHistory[id]=[{date:today(),price,supplier:'Initial'}];}
+  closeModal();notif(eid?'Ingredient updated':'Ingredient added');updateBadge();
+  renderItems(document.getElementById('pgContent'),document.getElementById('pgActions'));
+}
+function openEditIngr(id){openAddIngr(id);}
+function deleteIngr(id){if(!confirm('Remove ingredient?'))return;S.ingredients[rid()]=S.ingredients[rid()].filter(i=>i.id!==id);updateBadge();renderItems(document.getElementById('pgContent'),document.getElementById('pgActions'));notif('Removed');}
 
-    <div class="cal-stats-bar" id="calStats"></div>
+/* ═══════════════════════════════════════════════════════════════
+   PAGE: REPORTS
+═══════════════════════════════════════════════════════════════ */
+function renderStats(C, A) {
+  const ords = orders();
+  const totalRev = ords.reduce((s,o) => s+o.total, 0);
+  const totalCost = ords.reduce((order_total, o) => {
+    return order_total + o.items.reduce((t, item) => {
+      const dish = menuDishes().find(m => m.id === item.mid); if (!dish) return t;
+      const cost = dish.recipe.reduce((s,r) => s + avgCost(r.iid)*r.qty, 0);
+      return t + cost * item.qty;
+    }, 0);
+  }, 0);
+  const grossProfit = totalRev - totalCost;
+  const margin = totalRev > 0 ? ((grossProfit/totalRev)*100).toFixed(1) : '0.0';
+  const totalPurchased = purch().reduce((s,p) => s+p.total, 0);
 
-    <div class="modal-body cal-modal-body">
-      <div class="cal-grid-wrap">
-        <div class="cal-grid" id="calGrid"></div>
+  // Top dishes by qty ordered
+  const dishCount = {};
+  ords.forEach(o => o.items.forEach(i => { dishCount[i.mname] = (dishCount[i.mname]||0) + i.qty; }));
+  const topDishes = Object.entries(dishCount).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxD = topDishes[0]?.[1] || 1;
+
+  // Top ingredients by cost
+  const ingCost = {};
+  purch().forEach(p => { ingCost[p.iname] = (ingCost[p.iname]||0) + p.total; });
+  const topIngr = Object.entries(ingCost).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxI = topIngr[0]?.[1] || 1;
+
+  C.innerHTML = `
+    <div class="stat-grid sg5" style="margin-bottom:16px">
+      ${sc('Total Revenue',    fmt(totalRev),     ords.length+' orders', 'var(--green)')}
+      ${sc('Ingredient Cost',  fmt(totalCost),    'from orders')}
+      ${sc('Gross Profit',     fmt(grossProfit),  'from orders', grossProfit>=0?'var(--green)':'var(--red)')}
+      ${sc('Margin',           margin+'%',        '')}
+      ${sc('Purchase Spend',   fmt(totalPurchased),'restocking cost')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="card">
+        <div class="sec-title" style="margin-bottom:14px">Top Dishes Ordered</div>
+        ${topDishes.map(([n,v])=>`<div class="hbar"><div class="hbar-lbl">${n}</div><div class="hbar-bg"><div class="hbar-fill" style="width:${(v/maxD*100).toFixed(0)}%;background:var(--text)"></div></div><div class="hbar-val">${v}×</div></div>`).join('')||'<p style="color:var(--text3);font-size:12px">No orders yet.</p>'}
       </div>
-
-      <div id="dayPanel" class="day-panel" style="display:none">
-        <div class="day-panel-head">
-          <span id="dayPanelTitle"></span>
-          <button class="modal-close" style="width:24px;height:24px;font-size:13px;" onclick="closeDayPanel()">✕</button>
-        </div>
-        <table class="data-table">
-          <thead><tr><th>Customer</th><th>Staff</th><th>Loads</th><th>Total</th><th>Status</th></tr></thead>
-          <tbody id="dayPanelBody"></tbody>
-        </table>
+      <div class="card">
+        <div class="sec-title" style="margin-bottom:14px">Top Ingredient Spend</div>
+        ${topIngr.map(([n,v])=>`<div class="hbar"><div class="hbar-lbl">${n}</div><div class="hbar-bg"><div class="hbar-fill" style="width:${(v/maxI*100).toFixed(0)}%;background:var(--text)"></div></div><div class="hbar-val">${fmt(v)}</div></div>`).join('')||'<p style="color:var(--text3);font-size:12px">No purchases yet.</p>'}
       </div>
     </div>
-  </div>
-</div>
+    <div class="card" style="margin-top:14px">
+      <div class="sec-title" style="margin-bottom:12px">Per-Dish Profitability</div>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Dish</th><th>Price</th><th>Ingr. Cost</th><th>Gross Margin</th><th>% Margin</th><th>Times Ordered</th></tr></thead>
+        <tbody>
+          ${menuDishes().map(dish => {
+            const ingCostPerServing = dish.recipe.reduce((s,r)=>s+avgCost(r.iid)*r.qty,0);
+            const margin2 = dish.price > 0 ? (((dish.price-ingCostPerServing)/dish.price)*100).toFixed(1) : 0;
+            const ordered = ords.reduce((s,o)=>s+o.items.filter(i=>i.mid===dish.id).reduce((s2,i)=>s2+i.qty,0),0);
+            return `<tr>
+              <td style="font-weight:700">${dish.name}</td>
+              <td class="mono">${fmt(dish.price)}</td>
+              <td class="mono" style="color:var(--text2)">${fmt(ingCostPerServing)}</td>
+              <td class="mono" style="font-weight:700;color:${dish.price-ingCostPerServing>=0?'var(--green)':'var(--red)'}">${fmt(dish.price-ingCostPerServing)}</td>
+              <td><span class="badge ${parseFloat(margin2)>=50?'bg-green':parseFloat(margin2)>=30?'bg-amber':'bg-red'}">${margin2}%</span></td>
+              <td class="mono">${ordered}×</td>
+            </tr>`;
+          }).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">No menu dishes yet.</td></tr>'}
+        </tbody>
+      </table></div>
+    </div>`;
+}
 
+/* ═══════════════════════════════════════════════════════════════
+   PAGE: BRANCHES
+═══════════════════════════════════════════════════════════════ */
+function renderBranches(C, A) {
+  const branches = Object.values(S.restaurants);
+  A.innerHTML = `<button class="btn btn-dark btn-sm" onclick="openAddBranch()">+ Add Branch</button>`;
+  C.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+      ${branches.map(b => {
+        const ords2 = S.orders[b.id]||[], rev = ords2.reduce((s,o)=>s+o.total,0);
+        const ps2 = S.purchases[b.id]||[], spent = ps2.reduce((s,p)=>s+p.total,0);
+        const dishes2 = S.menu[b.id]||[], ingrs2 = S.ingredients[b.id]||[];
+        return `
+        <div class="card" style="${S.rid===b.id?'border-color:var(--text);border-width:2px':''}">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <div><div style="font-size:14px;font-weight:700">${b.name}</div><div style="font-size:11px;color:var(--text3);margin-top:1px">📍 ${b.location}</div></div>
+            ${S.rid===b.id?'<span class="badge bg-green">Active</span>':''}
+          </div>
+          <div class="divider" style="margin:8px 0"></div>
+          <div class="info-row"><span class="info-label">Ingredients</span><span class="mono" style="font-weight:700">${ingrs2.length}</span></div>
+          <div class="info-row"><span class="info-label">Dishes on menu</span><span class="mono" style="font-weight:700">${dishes2.length}</span></div>
+          <div class="info-row"><span class="info-label">Total orders</span><span class="mono" style="font-weight:700">${ords2.length}</span></div>
+          <div class="info-row"><span class="info-label">Revenue</span><span class="mono" style="font-weight:700;color:var(--green)">${fmt(rev)}</span></div>
+          <div class="info-row" style="border:none"><span class="info-label">Purchase spend</span><span class="mono" style="font-weight:700">${fmt(spent)}</span></div>
+          <div style="display:flex;gap:7px;margin-top:12px">
+            <button class="btn btn-dark btn-sm" style="flex:1" onclick="switchBranch('${b.id}')">Switch to this</button>
+            <button class="btn btn-light btn-sm" onclick="openEditBranch('${b.id}')">Edit</button>
+            ${branches.length>1?`<button class="btn btn-red btn-sm" onclick="delBranch('${b.id}')">✕</button>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+function openAddBranch(){showModal('Add Branch',`<div class="fg2"><div class="field"><label>Branch Name *</label><input type="text" id="fb_name" placeholder="e.g. The Rustic Table"></div><div class="field"><label>Location *</label><input type="text" id="fb_loc" placeholder="e.g. Downtown"></div></div>`,()=>saveBranch());}
+function saveBranch(eid){
+  const name=document.getElementById('fb_name').value.trim(), loc=document.getElementById('fb_loc').value.trim();
+  if(!name||!loc){notif('Fill in all fields');return}
+  if(eid){S.restaurants[eid]={...S.restaurants[eid],name,location:loc};}
+  else{const id=uid();S.restaurants[id]={id,name,location:loc};S.ingredients[id]=[];S.purchases[id]=[];S.orders[id]=[];S.menu[id]=[];}
+  closeModal();notif(eid?'Updated':'Branch added');populateSel();
+  renderBranches(document.getElementById('pgContent'),document.getElementById('pgActions'));
+}
+function openEditBranch(id){const b=S.restaurants[id];showModal('Edit Branch',`<div class="fg2"><div class="field"><label>Name *</label><input type="text" id="fb_name" value="${b.name}"></div><div class="field"><label>Location *</label><input type="text" id="fb_loc" value="${b.location}"></div></div>`,()=>saveBranch(id));}
+function delBranch(id){if(!confirm('Delete this branch and ALL its data?'))return;delete S.restaurants[id];delete S.ingredients[id];delete S.purchases[id];delete S.orders[id];delete S.menu[id];if(S.rid===id)S.rid=Object.keys(S.restaurants)[0];populateSel();renderBranches(document.getElementById('pgContent'),document.getElementById('pgActions'));notif('Deleted');}
+function switchBranch(id){S.rid=id;S.cart=[];document.getElementById('restSel').value=id;go('orders');}
 
-<!-- mobile sidebar overlay -->
-<div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
+/* ═══════════════════════════════════════════════════════════════
+   EXCEL
+═══════════════════════════════════════════════════════════════ */
+function exportFull() {
+  const rname = S.restaurants[rid()]?.name||'Restaurant', wb = XLSX.utils.book_new();
+  const ords = orders(), totalRev = ords.reduce((s,o)=>s+o.total,0);
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['RestaurantOS Export'],[''],['Branch:',rname],['Date:',new Date().toLocaleDateString('en-PH')],[''],['Total Orders:',ords.length],['Total Revenue (₱):',totalRev]]),'Summary');
+  const od=[['#','Date','Time','Items','Total (₱)','Note']];ords.forEach(o=>od.push([o.num,o.date,o.time,o.items.map(i=>`${i.qty}x ${i.mname}`).join(', '),o.total,o.note]));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(od),'Orders');
+  const pd=[['Date','Ingredient','Qty','Unit','Price/Unit (₱)','Total (₱)','Supplier']];purch().forEach(p=>pd.push([p.date,p.iname,p.qty,p.unit,p.price,p.total,p.supplier]));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(pd),'Purchases');
+  const sd=[['Ingredient','Category','Unit','In Stock','Avg Cost (₱)','Status']];ingrs().forEach(i=>{const s=stockOf(i.id),ac=avgCost(i.id);sd.push([i.name,i.cat,i.unit,s,+ac.toFixed(2),i.threshold>0&&s<=i.threshold?'Low':'OK']);});XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sd),'Stock');
+  XLSX.writeFile(wb,`${rname.replace(/\s+/g,'-')}_export_${today()}.xlsx`);notif('Exported');
+}
+function exportToExcel(type){
+  const wb=XLSX.utils.book_new();
+  if(type==='stock'){const d=[['Ingredient','Category','Unit','In Stock','Avg Cost (₱)','Threshold','Status']];ingrs().forEach(i=>{const s=stockOf(i.id),ac=avgCost(i.id);d.push([i.name,i.cat,i.unit,s,+ac.toFixed(2),i.threshold,i.threshold>0&&s<=i.threshold?'Low':'OK']);});XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Stock');}
+  else if(type==='purchases'){const d=[['Date','Ingredient','Qty','Unit','Price/Unit (₱)','Total (₱)','Supplier','Notes']];purch().forEach(p=>d.push([p.date,p.iname,p.qty,p.unit,p.price,p.total,p.supplier,p.notes]));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Purchases');}
+  else if(type==='items'){const d=[['Name','Category','Unit','Price (₱)','In Stock','Threshold']];ingrs().forEach(i=>d.push([i.name,i.cat,i.unit,i.price,stockOf(i.id),i.threshold]));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Ingredients');}
+  XLSX.writeFile(wb,`${type}-export-${today()}.xlsx`);notif('Exported');
+}
 
-<!-- toast -->
-<div class="toast" id="toast"></div>
+/* ═══════════════════════════════════════════════════════════════
+   MODAL / UTILS
+═══════════════════════════════════════════════════════════════ */
+function showModal(title, body, onSave, saveLabel='Save') {
+  const sp = onSave
+    ? `<button class="btn btn-dark" onclick="(${onSave.toString()})()">${saveLabel}</button>`
+    : `<button class="btn btn-dark" onclick="closeModal()">${saveLabel||'Close'}</button>`;
+  document.getElementById('modalWrap').innerHTML = `
+    <div class="overlay" onclick="handleOC(event)">
+      <div class="modal">
+        <div class="modal-head"><div class="modal-title">${title}</div><button class="xbtn" onclick="closeModal()">×</button></div>
+        <div class="modal-body">${body}</div>
+        <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button>${sp}</div>
+      </div>
+    </div>`;
+}
+function closeModal(){document.getElementById('modalWrap').innerHTML='';}
+function handleOC(e){if(e.target.classList.contains('overlay'))closeModal();}
+function filterTable(input,tid){const q=input.value.toLowerCase();document.querySelectorAll(`#${tid} tbody tr`).forEach(r=>{r.style.display=(r.dataset.search||r.textContent.toLowerCase()).includes(q)?'':'none';});}
 
-<script src="auth.js"></script>
-<script src="app.js"></script>
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════ */
+function populateSel(){
+  const sel=document.getElementById('restSel');
+  sel.innerHTML=Object.values(S.restaurants).map(r=>`<option value="${r.id}" ${r.id===S.rid?'selected':''}>${r.name}</option>`).join('');
+}
+function init() {
+  document.getElementById('pgDate').textContent = new Date().toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  populateSel(); updateBadge(); render('orders');
+}
+init();
+</script>
 </body>
 </html>
